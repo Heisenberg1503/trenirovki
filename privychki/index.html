@@ -108,6 +108,28 @@ th.today{color:var(--accent)}
 .chips button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:7px 12px;font-size:14px}
 .chips button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px;width:100%;min-height:110px;font-family:var(--f-num);font-size:12px;resize:vertical}
+
+/* habit name opens timer */
+button.nm{border:0;background:none;padding:0;text-align:left}
+.nm .play{color:var(--accent);font-weight:700}
+.tbanner{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--ink);color:var(--bg);border:0;border-radius:12px;padding:12px 14px;width:100%;text-align:left}
+.tbanner b{font-family:var(--f-num);font-size:18px}
+/* timer sheet */
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;
+  padding:18px max(16px,env(safe-area-inset-right,0px)) calc(22px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:16px}
+.sheet-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.sheet h2{font-family:var(--f-display);font-weight:500;font-size:19px;line-height:1.25}
+.x{border:1px solid var(--line);background:var(--bg);border-radius:10px;width:36px;height:36px;font-size:18px;flex:none}
+.clock{font-family:var(--f-num);font-weight:700;font-size:64px;line-height:1;text-align:center;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.clock.over{color:var(--accent)}
+.durrow{display:flex;justify-content:center;align-items:center;gap:12px}
+.durrow button{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--bg);font-size:20px}
+.durrow span{font-family:var(--f-num);font-weight:700;min-width:80px;text-align:center}
+.presets{justify-content:center}
+.bigbtn{padding:16px;font-size:17px}
+.donebox{text-align:center;display:flex;flex-direction:column;gap:6px;align-items:center}
+.donebox b{font-family:var(--f-display);font-size:20px}
 </style>
 </head>
 <body>
@@ -128,6 +150,7 @@ textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;pad
     <section id="view-edit" class="list" hidden></section>
   </div>
 </div>
+<div id="sheet" class="sheet-bg" hidden></div>
 <script>
 (function(){
   const $ = s => document.querySelector(s);
@@ -151,8 +174,9 @@ textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;pad
     {id:'sleep', name:'Лечь спать до 23:30', kind:'check'},
     {id:'menu', name:'Питание по меню', kind:'check', auto:'menu', note:'отмечается само, если отмечены все блюда дня'},
     {id:'nosugar', name:'Без сладкого', kind:'check'},
-    {id:'stretch', name:'Растяжка 10 минут', kind:'check'},
+    {id:'stretch', name:'Растяжка 10 минут', kind:'check', minutes:10},
     {id:'read', name:'Чтение', kind:'count', target:20, unit:'минут', step:5},
+    {id:'meditate', name:'Медитация', kind:'check', minutes:10},
     {id:'nophone', name:'Без телефона за час до сна', kind:'check'},
     {id:'veg', name:'Овощи', kind:'count', target:3, unit:'порции'}
   ];
@@ -215,17 +239,107 @@ textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;pad
       const ctrl = x.kind==='count'
         ? `<div class="counter"><button data-dec="${i}" aria-label="Меньше">−</button><span>${v2}/${x.target}</span><button data-inc="${i}" aria-label="Больше">+</button></div>`
         : `<button class="tick${x.auto?' auto':''}" data-tick="${i}" aria-pressed="${ok}" aria-label="${esc(x.name)}" ${x.auto?'disabled':''}>✓</button>`;
-      h += `<div class="habit${ok?' ok':''}"><div class="nm"><b>${esc(x.name)}${x.kind==='count'?` <small>· ${esc(x.unit||'')}</small>`:''}</b><small>${sub}</small></div>${ctrl}</div>`;
+      h += `<div class="habit${ok?' ok':''}"><button class="nm" data-open="${i}" aria-label="Таймер: ${esc(x.name)}"><b>${esc(x.name)}${x.kind==='count'?` <small>· ${esc(x.unit||'')}</small>`:''}</b><small><span class="play">▶ таймер</span> · ${sub}</small></button>${ctrl}</div>`;
     });
+    if (timer){ const th = habits.find(x=>x.id===timer.hid);
+      if (th) h = h.replace('<div class="panel ring">', `<button class="tbanner" data-open-timer="1"><span>${timer.run?'Идёт таймер':'Таймер на паузе'}: ${esc(th.name)}</span><b id="banner-time">${fmtT(shown())}</b></button><div class="panel ring">`); }
     v.innerHTML = h;
   }
   $('#view-today').addEventListener('click', ev=>{
+    const op = ev.target.closest('[data-open]'); if (op){ openTimer(habits[+op.dataset.open]); return; }
+    if (ev.target.closest('[data-open-timer]')){ renderSheet(); $('#sheet').hidden=false; return; }
     const n = ev.target.closest('[data-nav]'); if (n){ const nd = shift(day, +n.dataset.nav); if (nd<=TODAY){ day=nd; renderToday(); } return; }
     const t = ev.target.closest('[data-tick]'); if (t){ const h=habits[+t.dataset.tick]; setVal(h, day, isDone(h,day)?0:1); renderToday(); return; }
     const inc = ev.target.closest('[data-inc]'), dec = ev.target.closest('[data-dec]');
     if (inc||dec){ const h = habits[+(inc||dec).dataset[inc?'inc':'dec']]; const st = h.step||1;
       setVal(h, day, Math.max(0, val(h,day) + (inc?st:-st))); renderToday(); }
   });
+
+  /* ---------- timer ---------- */
+  // timer = {hid, mode:'down'|'up', dur (sec), acc (sec elapsed before last start), t0 (ms), run}
+  let timer = LS.get('timer'), finished = null, actx = null, wake = null;
+  const elapsed = () => timer ? timer.acc + (timer.run ? (Date.now()-timer.t0)/1000 : 0) : 0;
+  const shown = () => timer && timer.mode==='down' ? Math.max(0, timer.dur - elapsed()) : elapsed();
+  function fmtT(s){ s=Math.floor(Math.max(0,s)+1e-6); const h=Math.floor(s/3600), m=Math.floor(s%3600/60), x=s%60; return (h?h+':'+pad(m):pad(m))+':'+pad(x); }
+  const isMinutes = h => h.kind==='count' && /мин/i.test(h.unit||'');
+  const defMin = h => h.minutes || (isMinutes(h) ? Math.max(1, h.target - val(h,TODAY)) || h.target : 10);
+  function saveTimer(){ LS.set('timer', timer); }
+  function openTimer(h){
+    finished = null;
+    if (!timer || (timer.hid!==h.id && !timer.run && timer.acc===0) || !habits.some(x=>x.id===timer.hid))
+      timer = {hid:h.id, mode:'down', dur:defMin(h)*60, acc:0, t0:0, run:false};
+    saveTimer(); renderSheet(); $('#sheet').hidden = false;
+  }
+  function closeSheet(){ $('#sheet').hidden = true; finished = null; renderToday(); }
+  function beep(){
+    try{ actx = actx || new (window.AudioContext||window.webkitAudioContext)(); const now = actx.currentTime;
+      [0,.35,.7,1.4,1.75,2.1].forEach(o=>{ const os=actx.createOscillator(), g=actx.createGain(); os.frequency.value=880;
+        g.gain.setValueAtTime(.0001,now+o); g.gain.exponentialRampToValueAtTime(.35,now+o+.02); g.gain.exponentialRampToValueAtTime(.0001,now+o+.25);
+        os.connect(g).connect(actx.destination); os.start(now+o); os.stop(now+o+.3); }); }catch(e){}
+    try{ navigator.vibrate && navigator.vibrate([300,150,300]); }catch(e){}
+  }
+  async function keepAwake(on){
+    try{ if (on && !wake && navigator.wakeLock) { wake = await navigator.wakeLock.request('screen'); wake.addEventListener('release',()=>{ wake=null; }); }
+      if (!on && wake){ await wake.release(); wake = null; } }catch(e){ wake = null; }
+  }
+  function finish(){
+    const h = habits.find(x=>x.id===timer.hid), secs = elapsed();
+    let note = '';
+    if (h && !h.auto){
+      if (isMinutes(h)){ const add = Math.max(1, Math.round(secs/60)); setVal(h, TODAY, val(h,TODAY)+add); note = '+'+add+' мин к «'+h.name+'».'; }
+      else if (h.kind==='count'){ setVal(h, TODAY, val(h,TODAY)+(h.step||1)); note = 'Счётчик «'+h.name+'» увеличен.'; }
+      else { setVal(h, TODAY, 1); note = 'Привычка «'+h.name+'» отмечена.'; }
+    } else if (h) note = 'Эта привычка отмечается сама по записям в другом приложении.';
+    finished = {name: h?h.name:'', time: fmtT(secs), note};
+    timer = null; saveTimer(); keepAwake(false); renderSheet(); renderToday();
+  }
+  function renderSheet(){
+    const el = $('#sheet');
+    if (finished){
+      el.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-label="Таймер завершён"><div class="sheet-top"><div class="eyebrow">Таймер</div><button class="x" data-t="close" aria-label="Закрыть">×</button></div>
+        <div class="donebox"><b>Готово!</b><span class="num">${finished.time}</span><p class="hint">${esc(finished.note)}</p></div>
+        <button class="btn acc wide" data-t="close">Закрыть</button></div>`; return; }
+    if (!timer){ el.hidden = true; return; }
+    const h = habits.find(x=>x.id===timer.hid) || {name:'Привычка'}, e = elapsed(), started = e>0 || timer.run;
+    const mins = Math.round(timer.dur/60);
+    el.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-label="Таймер: ${esc(h.name)}">
+      <div class="sheet-top"><div><div class="eyebrow">Таймер</div><h2>${esc(h.name)}</h2></div><button class="x" data-t="close" aria-label="Свернуть">×</button></div>
+      ${started?'':`<div class="chips presets" role="group" aria-label="Режим"><button data-mode="down" aria-pressed="${timer.mode==='down'}">Обратный отсчёт</button><button data-mode="up" aria-pressed="${timer.mode==='up'}">Секундомер</button></div>`}
+      <div class="clock" id="t-clock" aria-live="off">${fmtT(shown())}</div>
+      ${timer.mode==='down'?`<div class="bar"><i id="t-bar" style="width:${Math.min(100,e/timer.dur*100)}%"></i></div>`:''}
+      ${!started && timer.mode==='down'?`<div class="durrow"><button data-dur="-1" aria-label="Минус минута">−</button><span>${mins} мин</span><button data-dur="1" aria-label="Плюс минута">+</button></div>
+        <div class="chips presets">${[5,10,15,20,30].map(m=>`<button data-preset="${m}" aria-pressed="${mins===m}">${m}</button>`).join('')}</div>`:''}
+      <button class="btn acc wide bigbtn" data-t="${timer.run?'pause':'start'}">${timer.run?'Пауза':started?'Продолжить':'Старт'}</button>
+      ${started?`<div class="btnrow"><button class="btn" data-t="reset">Сбросить</button><button class="btn" data-t="finish">Готово, отметить</button></div>`:''}
+      <p class="hint">${timer.mode==='down'?'Когда время выйдет, прозвучит сигнал и привычка отметится сама.':'Нажми «Готово, отметить», когда закончишь.'} Держи приложение открытым: экран не будет гаснуть. Если свернуть приложение, отсчёт продолжится, но сигнал прозвучит только когда вернёшься.</p>
+    </div>`;
+  }
+  $('#sheet').addEventListener('click', ev=>{
+    if (ev.target.id==='sheet'){ closeSheet(); return; }
+    const md = ev.target.closest('[data-mode]'); if (md && timer){ timer.mode = md.dataset.mode; saveTimer(); renderSheet(); return; }
+    const du = ev.target.closest('[data-dur]'); if (du && timer){ timer.dur = Math.max(60, Math.min(180*60, timer.dur + 60*Number(du.dataset.dur))); saveTimer(); renderSheet(); return; }
+    const pr = ev.target.closest('[data-preset]'); if (pr && timer){ timer.dur = 60*Number(pr.dataset.preset); saveTimer(); renderSheet(); return; }
+    const b = ev.target.closest('[data-t]'); if (!b) return; const a = b.dataset.t;
+    if (a==='close'){ closeSheet(); return; }
+    if (!timer) return;
+    if (a==='start'){ try{ actx = actx || new (window.AudioContext||window.webkitAudioContext)(); actx.resume(); }catch(e){}
+      if (timer.acc===0 && timer.mode==='down'){ const hh = habits.find(x=>x.id===timer.hid);
+        if (hh && !isMinutes(hh)){ hh.minutes = Math.round(timer.dur/60); LS.set('habits', habits); } }
+      timer.run = true; timer.t0 = Date.now(); keepAwake(true); }
+    if (a==='pause'){ timer.acc = elapsed(); timer.run = false; keepAwake(false); }
+    if (a==='reset'){ timer.acc = 0; timer.run = false; keepAwake(false); }
+    if (a==='finish'){ if (timer.run){ timer.acc = elapsed(); timer.run=false; } finish(); return; }
+    saveTimer(); renderSheet();
+  });
+  setInterval(()=>{
+    if (!timer) return;
+    if (timer.run && timer.mode==='down' && elapsed() >= timer.dur){ timer.acc = timer.dur; timer.run = false; beep(); finish(); $('#sheet').hidden = false; return; }
+    const c = $('#t-clock'); if (c && !$('#sheet').hidden) c.textContent = fmtT(shown());
+    const bar = $('#t-bar'); if (bar) bar.style.width = Math.min(100, elapsed()/timer.dur*100)+'%';
+    const bn = $('#banner-time'); if (bn) bn.textContent = fmtT(shown());
+  }, 250);
+  document.addEventListener('visibilitychange', ()=>{ if (!document.hidden && timer && timer.run) keepAwake(true); });
+  document.addEventListener('keydown', e=>{ if (e.key==='Escape' && !$('#sheet').hidden) closeSheet(); });
 
   /* ---------- week ---------- */
   function renderWeek(){
