@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Привычки">
+<meta name="theme-color" content="#F4F1EA">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Трекер привычек</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: one column; today's habits as large tap targets, a 7-day grid below, settings last */
+:root{
+  --bg:#F2F2EC; --surface:#FFFFFF; --ink:#22201A; --muted:#6A665A; --line:#DEDCD2;
+  --accent:#8A5A00; --accent-ink:#FFFFFF; --accent-soft:#F3E7CC; --warn:#B4400E; --empty:#E6E4DA;
+  --f-display:"Unbounded","Manrope",system-ui,sans-serif;
+  --f-body:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-num:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#15140F; --surface:#1F1D17; --ink:#EEEADF; --muted:#A39E8E; --line:#353227;
+  --accent:#E2B44A; --accent-ink:#1A1405; --accent-soft:#3A3017; --warn:#F0A060; --empty:#2C2A22; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#15140F; --surface:#1F1D17; --ink:#EEEADF; --muted:#A39E8E; --line:#353227;
+  --accent:#E2B44A; --accent-ink:#1A1405; --accent-soft:#3A3017; --warn:#F0A060; --empty:#2C2A22; color-scheme:dark}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{margin:0;text-wrap:balance}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+h1{font-family:var(--f-display);font-weight:700;font-size:26px;line-height:1.15}
+.links{display:flex;gap:12px;flex-wrap:wrap}
+.links a{font-size:13px;font-weight:600;color:var(--accent);text-decoration:none}
+.tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:4px}
+.tabs button{flex:1;border:0;background:none;padding:8px 4px;border-radius:7px;font-weight:600;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.list{display:flex;flex-direction:column;gap:12px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.panel h3{font-size:15px;font-weight:700}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.btn{border:1px solid var(--ink);background:none;border-radius:10px;padding:10px 14px;font-weight:600}
+.btn.acc{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.wide{width:100%;padding:14px;font-size:16px}
+.btn.small{padding:6px 10px;font-size:13px}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap}.btnrow .btn{flex:1 1 140px}
+.status{font-size:13px;color:var(--muted);text-align:center;min-height:20px}
+.status.ok{color:var(--accent)} .status.err{color:var(--warn)}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:12px;padding:20px;color:var(--muted);text-align:center}
+
+.daynav{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.daynav button{border:1px solid var(--line);background:var(--surface);border-radius:10px;width:40px;height:40px;font-size:18px}
+.daynav button:disabled{opacity:.35}
+.daynav div{text-align:center}
+.daynav b{display:block;font-size:16px}
+.daynav span{font-size:12px;color:var(--muted)}
+.ring{display:flex;flex-direction:row;align-items:center;gap:14px}
+.ring svg{width:64px;height:64px;flex:none}
+.ring b{font-family:var(--f-display);font-size:22px}
+
+.habit{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.habit.ok{border-color:var(--accent);background:var(--accent-soft)}
+.habit .nm{min-width:0}
+.habit .nm b{display:block;font-weight:700;line-height:1.3}
+.habit .nm small{color:var(--muted);font-size:12px}
+.tick{width:44px;height:44px;border-radius:12px;border:2px solid var(--line);background:var(--bg);font-size:20px;font-weight:700;color:transparent;display:grid;place-items:center}
+.ok .tick{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tick.auto{cursor:default}
+.counter{display:flex;align-items:center;gap:6px}
+.counter button{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font-size:20px;line-height:1}
+.counter span{min-width:52px;text-align:center;font-family:var(--f-num);font-weight:700}
+
+.grid{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:6px 4px;text-align:center}
+th{color:var(--muted);font-weight:600;font-size:11px}
+th.h,td.h{text-align:left;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:13px;color:var(--ink)}
+td i{display:inline-block;width:20px;height:20px;border-radius:6px;background:var(--empty);vertical-align:middle}
+td i.part{background:var(--accent-soft);outline:1px solid var(--accent)}
+td i.full{background:var(--accent)}
+th.today{color:var(--accent)}
+.stats li{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
+.stats{margin:0;padding:0;list-style:none}
+.bar{height:6px;border-radius:999px;background:var(--empty);overflow:hidden;margin-top:4px}
+.bar i{display:block;height:100%;background:var(--accent)}
+
+.edit{display:flex;flex-direction:column;gap:10px}
+.erow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.erow:last-child{border-bottom:0}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.field input,.field select{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:9px 10px;width:100%;min-width:0}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.form .full{grid-column:1/-1}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:7px 12px;font-size:14px}
+.chips button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px;width:100%;min-height:110px;font-family:var(--f-num);font-size:12px;resize:vertical}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><div class="eyebrow" id="sub">Каждый день понемногу</div><h1>Трекер привычек</h1></div>
+    <nav class="links"><a href="../">Тренировки →</a><a href="../pitanie/">Меню →</a></nav>
+  </header>
+  <section id="view-setup" class="list" hidden></section>
+  <div id="main" class="list">
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-today" aria-selected="true">Сегодня</button>
+      <button role="tab" id="tab-week" aria-selected="false">Неделя</button>
+      <button role="tab" id="tab-edit" aria-selected="false">Настроить</button>
+    </div>
+    <section id="view-today" class="list"></section>
+    <section id="view-week" class="list" hidden></section>
+    <section id="view-edit" class="list" hidden></section>
+  </div>
+</div>
+<script>
+(function(){
+  const $ = s => document.querySelector(s);
+  const pad = n => String(n).padStart(2,'0');
+  const ymd = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  const parse = s => { const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); };
+  const shift = (s,n) => { const d=parse(s); d.setDate(d.getDate()+n); return ymd(d); };
+  const TODAY = ymd(new Date());
+  const MON = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+  const WD = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+  const WDL = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
+  const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const plural=(n,a,b,c)=>{n=Math.abs(n)%100;const n1=n%10;if(n>10&&n<20)return c;if(n1>1&&n1<5)return b;if(n1==1)return a;return c;};
+  const raw = k => { try{ return JSON.parse(localStorage.getItem(k)||'null'); }catch(e){ return null; } };
+  const LS = { get:k=>raw('hab-'+k), set(k,v){ try{ localStorage.setItem('hab-'+k, JSON.stringify(v)); }catch(e){} } };
+
+  const SUGGEST = [
+    {id:'workout', name:'Тренировка по плану', kind:'check', auto:'workout', note:'отмечается само из дневника тренировок'},
+    {id:'water', name:'Вода', kind:'count', target:8, unit:'стаканов'},
+    {id:'steps', name:'10 000 шагов', kind:'check'},
+    {id:'sleep', name:'Лечь спать до 23:30', kind:'check'},
+    {id:'menu', name:'Питание по меню', kind:'check', auto:'menu', note:'отмечается само, если отмечены все блюда дня'},
+    {id:'nosugar', name:'Без сладкого', kind:'check'},
+    {id:'stretch', name:'Растяжка 10 минут', kind:'check'},
+    {id:'read', name:'Чтение', kind:'count', target:20, unit:'минут', step:5},
+    {id:'nophone', name:'Без телефона за час до сна', kind:'check'},
+    {id:'veg', name:'Овощи', kind:'count', target:3, unit:'порции'}
+  ];
+  let habits = LS.get('habits');
+  let marks = LS.get('marks') || {};
+  let day = TODAY;
+
+  /* ---------- auto marks from sibling apps (same site) ---------- */
+  function autoValue(h, d){
+    if (h.auto==='workout'){ const logs = raw('logs')||{}; const l = logs[d];
+      return l && Array.isArray(l.exercises) && l.exercises.some(e=>(e.sets||[]).some(s=>s.done)) ? 1 : 0; }
+    if (h.auto==='menu'){ const m = raw('pit-menu'); const dd = m && m.days && m.days.find(x=>x.date===d);
+      if (!dd) return 0; const ms = Object.values(dd.meals||{}); return ms.length && ms.every(x=>x.done) ? 1 : 0; }
+    return 0;
+  }
+  const val = (h,d) => h.auto ? autoValue(h,d) : ((marks[d]||{})[h.id]||0);
+  const target = h => h.kind==='count' ? (h.target||1) : 1;
+  const isDone = (h,d) => val(h,d) >= target(h);
+  function streak(h){
+    let d = isDone(h,TODAY) ? TODAY : shift(TODAY,-1), n = 0;
+    while (isDone(h,d) && n<3650){ n++; d = shift(d,-1); }
+    return n;
+  }
+  function setVal(h, d, v){ (marks[d] ||= {})[h.id] = v; LS.set('marks', marks); }
+
+  /* ---------- setup ---------- */
+  let pick = null;
+  function renderSetup(){
+    pick = pick || new Set(['workout','water','sleep','steps']);
+    $('#view-setup').innerHTML = `<div class="panel"><h3>Выбери привычки для начала</h3>
+      <p class="hint">Лучше начать с 3–5. Остальные можно добавить потом, свои тоже.</p>
+      <div class="chips">${SUGGEST.map(s=>`<button data-pick="${s.id}" aria-pressed="${pick.has(s.id)}">${esc(s.name)}</button>`).join('')}</div>
+      <p class="hint">«Тренировка» и «Питание по меню» отмечаются сами по твоим записям в двух других приложениях.</p></div>
+      <button class="btn acc wide" id="setup-done">Начать</button><div class="status" id="setup-status"></div>`;
+  }
+  $('#view-setup').addEventListener('click', ev=>{
+    const b = ev.target.closest('[data-pick]');
+    if (b){ const id=b.dataset.pick; pick.has(id)?pick.delete(id):pick.add(id); b.setAttribute('aria-pressed', pick.has(id)); return; }
+    if (ev.target.id==='setup-done'){
+      if (!pick.size){ $('#setup-status').textContent='Выбери хотя бы одну привычку.'; $('#setup-status').className='status err'; return; }
+      habits = SUGGEST.filter(s=>pick.has(s.id)).map(s=>Object.assign({}, s)); LS.set('habits', habits); show('today');
+    }
+  });
+
+  /* ---------- today ---------- */
+  function ringSVG(p){ const r=26, c=2*Math.PI*r;
+    return `<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="${r}" fill="none" stroke="var(--empty)" stroke-width="8"/>
+      <circle cx="32" cy="32" r="${r}" fill="none" stroke="var(--accent)" stroke-width="8" stroke-linecap="round" stroke-dasharray="${c*p} ${c}" transform="rotate(-90 32 32)"/></svg>`; }
+  function renderToday(){
+    const v = $('#view-today');
+    if (!habits.length){ v.innerHTML = `<div class="empty">Привычек нет. Добавь их во вкладке «Настроить».</div>`; return; }
+    const d = parse(day), done = habits.filter(h=>isDone(h,day)).length;
+    let h = `<div class="daynav"><button data-nav="-1" aria-label="Предыдущий день">‹</button>
+        <div><b>${day===TODAY?'Сегодня':day===shift(TODAY,-1)?'Вчера':WDL[d.getDay()]}</b><span>${d.getDate()} ${MON[d.getMonth()]}</span></div>
+        <button data-nav="1" aria-label="Следующий день" ${day>=TODAY?'disabled':''}>›</button></div>
+      <div class="panel ring">${ringSVG(habits.length?done/habits.length:0)}<div><b class="num">${done} из ${habits.length}</b><p class="hint">${done===habits.length?'Все привычки на сегодня выполнены.':'Отмечай по ходу дня. Пропущенное можно отметить задним числом стрелкой влево.'}</p></div></div>`;
+    habits.forEach((x,i)=>{
+      const ok = isDone(x,day), s = streak(x), v2 = val(x,day);
+      const sub = (x.auto?'Отмечается само · ':'') + (s?`серия ${s} ${plural(s,'день','дня','дней')}`:'серии пока нет');
+      const ctrl = x.kind==='count'
+        ? `<div class="counter"><button data-dec="${i}" aria-label="Меньше">−</button><span>${v2}/${x.target}</span><button data-inc="${i}" aria-label="Больше">+</button></div>`
+        : `<button class="tick${x.auto?' auto':''}" data-tick="${i}" aria-pressed="${ok}" aria-label="${esc(x.name)}" ${x.auto?'disabled':''}>✓</button>`;
+      h += `<div class="habit${ok?' ok':''}"><div class="nm"><b>${esc(x.name)}${x.kind==='count'?` <small>· ${esc(x.unit||'')}</small>`:''}</b><small>${sub}</small></div>${ctrl}</div>`;
+    });
+    v.innerHTML = h;
+  }
+  $('#view-today').addEventListener('click', ev=>{
+    const n = ev.target.closest('[data-nav]'); if (n){ const nd = shift(day, +n.dataset.nav); if (nd<=TODAY){ day=nd; renderToday(); } return; }
+    const t = ev.target.closest('[data-tick]'); if (t){ const h=habits[+t.dataset.tick]; setVal(h, day, isDone(h,day)?0:1); renderToday(); return; }
+    const inc = ev.target.closest('[data-inc]'), dec = ev.target.closest('[data-dec]');
+    if (inc||dec){ const h = habits[+(inc||dec).dataset[inc?'inc':'dec']]; const st = h.step||1;
+      setVal(h, day, Math.max(0, val(h,day) + (inc?st:-st))); renderToday(); }
+  });
+
+  /* ---------- week ---------- */
+  function renderWeek(){
+    const v = $('#view-week');
+    if (!habits.length){ v.innerHTML = `<div class="empty">Привычек нет.</div>`; return; }
+    const days = Array.from({length:7},(_,i)=>shift(TODAY,i-6));
+    let h = `<div class="panel"><h3>Последние 7 дней</h3><div class="grid"><table><thead><tr><th class="h">Привычка</th>${days.map(d=>`<th class="${d===TODAY?'today':''}">${WD[parse(d).getDay()]}<br>${parse(d).getDate()}</th>`).join('')}</tr></thead><tbody>`;
+    habits.forEach(x=>{ h += `<tr><td class="h" title="${esc(x.name)}">${esc(x.name)}</td>${days.map(d=>{ const vv=val(x,d), t=target(x);
+      return `<td><i class="${vv>=t?'full':vv>0?'part':''}" title="${vv}/${t}"></i></td>`; }).join('')}</tr>`; });
+    h += `</tbody></table></div></div><div class="panel"><h3>За 30 дней</h3><ul class="stats">`;
+    habits.forEach(x=>{ let n=0; for(let i=0;i<30;i++) if(isDone(x,shift(TODAY,-i))) n++;
+      const best = bestStreak(x);
+      h += `<li><div style="flex:1;min-width:0"><span>${esc(x.name)}</span><div class="bar"><i style="width:${Math.round(n/30*100)}%"></i></div></div><span class="num">${n}/30 · рекорд ${best}</span></li>`; });
+    h += `</ul></div>`;
+    v.innerHTML = h;
+  }
+  function bestStreak(h){ let best=0, cur=0; for(let i=365;i>=0;i--){ if(isDone(h,shift(TODAY,-i))){ cur++; best=Math.max(best,cur); } else cur=0; } return best; }
+
+  /* ---------- edit ---------- */
+  let editMsg=['',''], newKind='check';
+  function renderEdit(){
+    const free = SUGGEST.filter(s=>!habits.some(h=>h.id===s.id));
+    $('#view-edit').innerHTML = `<div class="panel edit"><h3>Мои привычки</h3>
+        ${habits.map((x,i)=>`<div class="erow"><div class="nm"><b>${esc(x.name)}</b><br><small class="hint">${x.kind==='count'?'цель '+x.target+' '+esc(x.unit||''):'галочка'}${x.auto?' · отмечается само':''}</small></div>
+          <div class="btnrow"><button class="btn small" data-up="${i}" aria-label="Выше" ${i?'':'disabled'}>↑</button><button class="btn small" data-del="${i}">Удалить</button></div></div>`).join('') || '<p class="hint">Пока пусто.</p>'}
+      </div>
+      ${free.length?`<div class="panel"><h3>Быстро добавить</h3><div class="chips">${free.map(s=>`<button data-add="${s.id}" aria-pressed="false">+ ${esc(s.name)}</button>`).join('')}</div></div>`:''}
+      <div class="panel"><h3>Своя привычка</h3><div class="form">
+        <div class="field full"><label for="n-name">Название</label><input id="n-name" placeholder="например, Медитация"></div>
+        <div class="field full"><label>Как отмечать</label><div class="chips"><button data-kind="check" aria-pressed="${newKind==='check'}">Галочка</button><button data-kind="count" aria-pressed="${newKind==='count'}">Счётчик</button></div></div>
+        ${newKind==='count'?`<div class="field"><label for="n-target">Цель в день</label><input id="n-target" class="num" inputmode="numeric" value="5"></div>
+        <div class="field"><label for="n-unit">Единица</label><input id="n-unit" placeholder="минут, раз…"></div>`:''}
+        <button class="btn acc full" data-create="1">Добавить привычку</button></div></div>
+      <div class="panel"><h3>Отправить Claude</h3><p class="hint">Выгрузка за последние 14 дней. Отправь в чат, разберу, что получается и что мешает.</p>
+        <textarea readonly id="export-text" aria-label="Выгрузка">${esc(exportText())}</textarea>
+        <div class="btnrow">${navigator.share?'<button class="btn acc" data-x="share">Поделиться</button>':''}<button class="btn" data-x="copy">Скопировать</button></div></div>
+      <div class="panel"><h3>Загрузить от Claude или из копии</h3><textarea id="import-text" placeholder='{"habits": [ … ]}' aria-label="Вставить"></textarea>
+        <div class="btnrow"><button class="btn acc" data-x="import">Применить</button><button class="btn" data-x="backup">Скачать копию</button></div>
+        <p class="hint">Всё хранится только на этом телефоне. Иногда сохраняй копию.</p></div>
+      <div class="status ${editMsg[1]}" id="edit-status">${esc(editMsg[0])}</div>`;
+  }
+  function setMsg(t,c){ editMsg=[t,c]; const e=$('#edit-status'); if(e){ e.textContent=t; e.className='status '+c; } }
+  function exportText(){
+    const days = Array.from({length:14},(_,i)=>shift(TODAY,i-13));
+    const lines = ['ПРИВЫЧКИ · выгрузка для Claude', 'Выгружено: '+new Date().toLocaleString('ru-RU'), ''];
+    habits.forEach(h=>{ lines.push('■ '+h.name+(h.kind==='count'?' (цель '+h.target+' '+(h.unit||'')+')':'')+' · серия '+streak(h)+' · рекорд '+bestStreak(h));
+      lines.push('  '+days.map(d=>d.slice(5)+':'+(h.kind==='count'?val(h,d):(isDone(h,d)?'✓':'·'))).join(' ')); });
+    lines.push('', '---JSON---', JSON.stringify({habits, marks: Object.fromEntries(days.filter(d=>marks[d]).map(d=>[d,marks[d]]))}));
+    return lines.join('\n');
+  }
+  function download(name, text){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'})); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},1000); }
+  $('#view-edit').addEventListener('click', async ev=>{
+    const k = ev.target.closest('[data-kind]'); if (k){ newKind=k.dataset.kind; renderEdit(); return; }
+    const up = ev.target.closest('[data-up]'); if (up){ const i=+up.dataset.up; [habits[i-1],habits[i]]=[habits[i],habits[i-1]]; LS.set('habits',habits); renderEdit(); return; }
+    const del = ev.target.closest('[data-del]');
+    if (del){ if (del.dataset.sure){ habits.splice(+del.dataset.del,1); LS.set('habits',habits); setMsg('Привычка удалена. Старые отметки сохранены.','ok'); renderEdit(); }
+      else { del.dataset.sure='1'; del.textContent='Точно?'; } return; }
+    const add = ev.target.closest('[data-add]'); if (add){ habits.push(Object.assign({}, SUGGEST.find(s=>s.id===add.dataset.add))); LS.set('habits',habits); setMsg('Добавлено.','ok'); renderEdit(); return; }
+    if (ev.target.closest('[data-create]')){
+      const name = $('#n-name').value.trim(); if (!name){ setMsg('Напиши название привычки.','err'); $('#n-name').focus(); return; }
+      const h = {id:'h'+Date.now().toString(36), name, kind:newKind};
+      if (newKind==='count'){ const t=parseInt($('#n-target').value,10); if(!(t>0)){ setMsg('Цель должна быть числом больше нуля.','err'); return; } h.target=t; h.unit=$('#n-unit').value.trim(); if(t>=15) h.step=5; }
+      habits.push(h); LS.set('habits',habits); newKind='check'; setMsg('Привычка «'+name+'» добавлена.','ok'); renderEdit(); return;
+    }
+    const x = ev.target.closest('[data-x]'); if (!x) return;
+    if (x.dataset.x==='share'){ try{ await navigator.share({title:'Привычки', text:exportText()}); setMsg('Отправлено.','ok'); }catch(e){ if(e&&e.name!=='AbortError') setMsg('Не получилось. Нажми «Скопировать».','err'); } }
+    if (x.dataset.x==='copy'){ try{ await navigator.clipboard.writeText(exportText()); setMsg('Скопировано.','ok'); }catch(e){ const t=$('#export-text'); t.focus(); t.select(); setMsg('Текст выделен, скопируй вручную.',''); } }
+    if (x.dataset.x==='backup'){ download('privychki-backup-'+TODAY+'.json', JSON.stringify({habits, marks},null,1)); setMsg('Копия сохранена.','ok'); }
+    if (x.dataset.x==='import'){
+      const s = $('#import-text').value, i=s.indexOf('{'), j=s.lastIndexOf('}');
+      try{ if(i<0||j<i) throw 0; const o = JSON.parse(s.slice(i,j+1)); let n=0;
+        if (Array.isArray(o.habits)){ habits = o.habits.filter(h=>h&&h.id&&h.name); LS.set('habits',habits); n++; }
+        if (o.marks && typeof o.marks==='object'){ Object.entries(o.marks).forEach(([d,m])=>{ marks[d]=Object.assign(marks[d]||{}, m); }); LS.set('marks',marks); n++; }
+        if (!n) throw 0; setMsg('Загружено.','ok'); renderEdit();
+      }catch(e){ setMsg('Не получилось прочитать. Скопируй блок целиком, от «{» до «}».','err'); }
+    }
+  });
+
+  /* ---------- nav ---------- */
+  const tabs = ['today','week','edit'];
+  function show(t){
+    $('#view-setup').hidden = true; $('#main').hidden = false;
+    tabs.forEach(o=>{ $('#tab-'+o).setAttribute('aria-selected', o===t); $('#view-'+o).hidden = o!==t; });
+    if (t==='today') renderToday(); if (t==='week') renderWeek(); if (t==='edit') renderEdit();
+  }
+  tabs.forEach(t=>$('#tab-'+t).addEventListener('click',()=>show(t)));
+  window.addEventListener('pageshow', ()=>{ if (habits && !$('#view-today').hidden) renderToday(); });
+  document.addEventListener('visibilitychange', ()=>{ if (!document.hidden && habits && !$('#view-today').hidden) renderToday(); });
+  if (!habits){ $('#main').hidden = true; $('#view-setup').hidden = false; renderSetup(); } else show('today');
+  if ('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
+</script>
+</body>
+</html>
