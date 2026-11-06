@@ -76,12 +76,10 @@ h1{font-family:var(--f-display);font-weight:700;font-size:26px;line-height:1.15}
 .prog i{display:block;height:100%;background:var(--accent)}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:18px;min-height:280px;padding:24px 18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;width:100%}
 .card .w{font-family:var(--f-display);font-weight:500;font-size:clamp(26px,8vw,38px);line-height:1.15;overflow-wrap:anywhere}
-.card .tr{font-family:var(--f-num);color:var(--muted);font-size:16px}
 .card .ru{font-size:22px;font-weight:700;overflow-wrap:anywhere}
 .card .ex{font-size:14px;color:var(--muted);font-style:italic}
 .card .tap{font-size:13px;color:var(--muted)}
 .card hr{width:40%;border:0;border-top:1px solid var(--line);margin:6px 0}
-.say{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 14px;font-size:14px;font-weight:600}
 .answer{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .answer .no{border-color:var(--bad);color:var(--bad)}
 .answer .yes{background:var(--good);border-color:var(--good);color:var(--accent-ink)}
@@ -101,7 +99,6 @@ h1{font-family:var(--f-display);font-weight:700;font-size:26px;line-height:1.15}
 .wrow:first-child{border-top:0}
 .wrow .t{min-width:0}
 .wrow b{font-weight:700}
-.wrow .tr{font-family:var(--f-num);color:var(--muted);font-size:12px}
 .wrow .ru{display:block;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
 .dots{display:flex;gap:3px}
 .dots i{width:7px;height:7px;border-radius:50%;background:var(--line)}
@@ -165,13 +162,6 @@ textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;pad
   const isDue = w => !isNew(w) && w.box<MASTER && w.due<=TODAY;
   const newLeft = () => Math.max(0, settings.newPerDay - ((log[TODAY]||{}).new||0));
 
-  /* ---------- speech (works offline on iPhone) ---------- */
-  let voice = null;
-  function pickVoice(){ const vs = (window.speechSynthesis && speechSynthesis.getVoices()) || []; voice = vs.find(v=>/en[-_]GB/i.test(v.lang)) || vs.find(v=>/^en/i.test(v.lang)) || null; }
-  if (window.speechSynthesis){ pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
-  function say(text){ try{ if(!window.speechSynthesis) return; speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = voice ? voice.lang : 'en-GB'; if (voice) u.voice = voice; u.rate = .9; speechSynthesis.speak(u); }catch(e){} }
-  document.addEventListener('click', e=>{ const b = e.target.closest('[data-say]'); if (b){ e.stopPropagation(); say(b.dataset.say); } }, true);
-
   /* ---------- learn home ---------- */
   function counts(){ return { due: words.filter(isDue).length, fresh: Math.min(newLeft(), words.filter(isNew).length),
     learned: words.filter(w=>w.box>=MASTER).length, inwork: words.filter(w=>!isNew(w)&&w.box<MASTER).length, total: words.length }; }
@@ -223,20 +213,19 @@ textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;pad
   function renderStudy(){
     const w = cur(), v = $('#view-learn'), pct = Math.round(S.i/S.queue.length*100);
     let h = `<div class="topbar"><button class="btn small" data-act="stop">Закончить</button><div class="prog"><i style="width:${pct}%"></i></div><span class="num">${S.i+1}/${S.queue.length}</span></div>`;
-    const sayBtn = `<button class="say" data-say="${esc(w.en)}">🔊 Послушать</button>`;
     if (S.mode==='cards' || S.mode==='reverse'){
       const front = S.mode==='cards'
-        ? `<div class="w">${esc(w.en)}</div>${w.tr?`<div class="tr">[${esc(w.tr)}]</div>`:''}${sayBtn}`
+        ? `<div class="w">${esc(w.en)}</div>`
         : `<div class="ru">${esc(w.ru)}</div>`;
       const back = S.mode==='cards'
         ? `<hr><div class="ru">${esc(w.ru)}</div>${w.ex?`<div class="ex">${esc(w.ex)}</div>`:''}`
-        : `<hr><div class="w">${esc(w.en)}</div>${w.tr?`<div class="tr">[${esc(w.tr)}]</div>`:''}${sayBtn}${w.ex?`<div class="ex">${esc(w.ex)}</div>`:''}`;
+        : `<hr><div class="w">${esc(w.en)}</div>${w.ex?`<div class="ex">${esc(w.ex)}</div>`:''}`;
       h += `<div class="card" data-act="flip" role="button" tabindex="0" aria-label="Перевернуть карточку">${isNew(w)?'<span class="eyebrow">новое слово</span>':''}${front}${S.flipped?back:'<div class="tap">Вспомни и нажми на карточку</div>'}</div>`;
       h += S.flipped ? `<div class="answer"><button class="btn wide no" data-grade="0">Не вспомнил</button><button class="btn wide yes" data-grade="1">Вспомнил</button></div>`
                      : `<button class="btn acc wide" data-act="flip">Показать ответ</button>`;
     } else if (S.mode==='quiz'){
       if (!S.opts){ const others = shuffle(words.filter(x=>x.id!==w.id && x.ru!==w.ru)).slice(0,3); S.opts = shuffle([w].concat(others)).map(x=>x.id); }
-      h += `<div class="card">${isNew(w)?'<span class="eyebrow">новое слово</span>':''}<div class="w">${esc(w.en)}</div>${w.tr?`<div class="tr">[${esc(w.tr)}]</div>`:''}${sayBtn}</div>
+      h += `<div class="card">${isNew(w)?'<span class="eyebrow">новое слово</span>':''}<div class="w">${esc(w.en)}</div></div>
         <div class="opts">${S.opts.map(id=>{ const o=words.find(x=>x.id===id); let cls='';
           if (S.answered){ if (id===w.id) cls=' right'; else if (id===S.answered) cls=' wrong'; }
           return `<button class="opt${cls}" data-opt="${id}" ${S.answered?'disabled':''}>${esc(o.ru)}</button>`; }).join('')}</div>
@@ -244,7 +233,7 @@ textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;pad
     } else if (S.mode==='type'){
       const ok = S.answered && S.answered.ok;
       h += `<div class="card">${isNew(w)?'<span class="eyebrow">новое слово</span>':''}<div class="ru">${esc(w.ru)}</div>
-          ${S.answered?`<hr><div class="w">${esc(w.en)}</div>${w.tr?`<div class="tr">[${esc(w.tr)}]</div>`:''}${sayBtn}`:''}</div>
+          ${S.answered?`<hr><div class="w">${esc(w.en)}</div>`:''}</div>
         ${S.answered?`<div class="verdict ${ok?'good':'bad'}">${ok?'Верно!':'Ты написал: '+esc(S.answered.text||'—')}</div><button class="btn acc wide" data-act="next">Дальше</button>`
           :`<div class="typebox"><input id="type-in" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="по-английски" aria-label="Слово по-английски"><button class="btn acc" data-act="check">Проверить</button></div>
             <button class="btn" data-act="giveup">Не знаю</button>`}`;
@@ -285,10 +274,10 @@ textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;pad
   $('#view-learn').addEventListener('click', ev=>{
     const m = ev.target.closest('[data-mode]'); if (m){ start(m.dataset.mode); return; }
     const g = ev.target.closest('[data-grade]'); if (g){ grade(g.dataset.grade==='1'); return; }
-    const o = ev.target.closest('[data-opt]'); if (o && S && !S.answered){ S.answered = o.dataset.opt; S.ok = S.answered===cur().id; if (!S.ok) say(cur().en); renderStudy(); return; }
+    const o = ev.target.closest('[data-opt]'); if (o && S && !S.answered){ S.answered = o.dataset.opt; S.ok = S.answered===cur().id; renderStudy(); return; }
     const a = ev.target.closest('[data-act]'); if (!a) return;
     const act = a.dataset.act;
-    if (act==='flip' && S && !S.flipped){ S.flipped = true; renderStudy(); if (S.mode==='reverse') say(cur().en); }
+    if (act==='flip' && S && !S.flipped){ S.flipped = true; renderStudy(); }
     if (act==='next' && S){ const ok = S.mode==='quiz' ? S.ok : S.answered.ok; S.opts = null; grade(ok); }
     if (act==='check' && S){ const t = $('#type-in').value; S.answered = {text:t, ok: norm(t)===norm(cur().en)}; renderStudy(); }
     if (act==='giveup' && S){ S.answered = {text:'', ok:false}; renderStudy(); }
@@ -314,13 +303,12 @@ textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;pad
     v.innerHTML = `<div class="panel"><h3>Добавить слово</h3><div class="form">
         <div class="field"><label for="a-en">Слово</label><input id="a-en" autocapitalize="off" spellcheck="false" placeholder="example"></div>
         <div class="field"><label for="a-ru">Перевод</label><input id="a-ru" placeholder="пример"></div>
-        <div class="field"><label for="a-tr">Транскрипция</label><input id="a-tr" placeholder="ɪɡˈzɑːm.pəl"></div>
-        <div class="field"><label for="a-ex">Пример</label><input id="a-ex" placeholder="For example, …"></div>
+        <div class="field full"><label for="a-ex">Пример (необязательно)</label><input id="a-ex" placeholder="For example, …"></div>
         <button class="btn acc full" data-d="add">Добавить</button></div>
         <div class="status ${dictMsg[1]}" id="dict-status">${esc(dictMsg[0])}</div></div>
       <input class="search" id="search" type="search" placeholder="Поиск по слову или переводу" value="${esc(q)}" aria-label="Поиск">
       <div class="seg"><button data-sort="az" aria-pressed="${sort==='az'}">А–Я</button><button data-sort="new" aria-pressed="${sort==='new'}">Новые сверху</button><button data-sort="weak" aria-pressed="${sort==='weak'}">Сложные сверху</button></div>
-      ${list.length?`<div class="words">${list.map(w=>`<button class="wrow" data-word="${w.id}"><span class="t"><b>${esc(w.en)}</b> ${w.tr?`<span class="tr">[${esc(w.tr)}]</span>`:''}<span class="ru">${esc(w.ru)}</span></span>${dots(w)}</button>`).join('')}</div>`
+      ${list.length?`<div class="words">${list.map(w=>`<button class="wrow" data-word="${w.id}"><span class="t"><b>${esc(w.en)}</b><span class="ru">${esc(w.ru)}</span></span>${dots(w)}</button>`).join('')}</div>`
         : `<div class="empty">${qq?'Ничего не нашлось.':'Словарь пуст.'}</div>`}`;
     dictMsg = ['',''];
   }
@@ -331,9 +319,9 @@ textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;pad
     const r = ev.target.closest('[data-word]'); if (r){ openEdit(r.dataset.word); return; }
     if (ev.target.closest('[data-d="add"]')){
       const en = $('#a-en').value.trim(), ru = $('#a-ru').value.trim();
-      if (!en || !ru){ const st=$('#dict-status'); st.textContent='Нужны слово и перевод. Транскрипция и пример по желанию.'; st.className='status err'; return; }
+      if (!en || !ru){ const st=$('#dict-status'); st.textContent='Нужны слово и перевод. Пример по желанию.'; st.className='status err'; return; }
       if (words.some(w=>w.en.toLowerCase()===en.toLowerCase())){ const st=$('#dict-status'); st.textContent='Слово «'+en+'» уже есть в словаре.'; st.className='status err'; return; }
-      words.push({id:'w'+Date.now().toString(36), en, ru, tr:$('#a-tr').value.trim().replace(/^\[|\]$/g,'').replace(/^\/|\/$/g,''), ex:$('#a-ex').value.trim(), box:0, due:TODAY, seen:0, right:0, wrong:0, added:TODAY});
+      words.push({id:'w'+Date.now().toString(36), en, ru, tr:'', ex:$('#a-ex').value.trim(), box:0, due:TODAY, seen:0, right:0, wrong:0, added:TODAY});
       LS.set('words', words); dictMsg = ['Добавлено: '+en+'. Слово появится в тренировке как новое.','ok']; renderDict(); $('#a-en').focus();
     }
   });
@@ -342,12 +330,11 @@ textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;pad
   function openEdit(id){
     const w = words.find(x=>x.id===id), el = $('#sheet');
     el.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-label="Редактировать ${esc(w.en)}">
-      <div class="btnrow" style="justify-content:space-between;align-items:center"><h2>${esc(w.en)}</h2><button class="say" data-say="${esc(w.en)}">🔊</button></div>
+      <h2>${esc(w.en)}</h2>
       <div class="form">
         <div class="field"><label for="e-en">Слово</label><input id="e-en" value="${esc(w.en)}" autocapitalize="off" spellcheck="false"></div>
         <div class="field"><label for="e-ru">Перевод</label><input id="e-ru" value="${esc(w.ru)}"></div>
-        <div class="field"><label for="e-tr">Транскрипция</label><input id="e-tr" value="${esc(w.tr)}"></div>
-        <div class="field"><label for="e-ex">Пример</label><input id="e-ex" value="${esc(w.ex)}"></div></div>
+        <div class="field full"><label for="e-ex">Пример</label><input id="e-ex" value="${esc(w.ex)}"></div></div>
       <p class="hint">Прогресс: ${w.box>=MASTER?'выучено':w.box+' из '+MASTER} · верно ${w.right}, ошибок ${w.wrong}${w.seen?' · следующий повтор '+(w.due<=TODAY?'сегодня':w.due.split('-').reverse().join('.')):''}</p>
       <button class="btn acc wide" data-e="save">Сохранить</button>
       <div class="btnrow"><button class="btn" data-e="reset">Учить заново</button><button class="btn" data-e="del">Удалить</button></div>
@@ -361,7 +348,7 @@ textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;pad
     const w = words.find(x=>x.id===el.dataset.id); const a = b.dataset.e;
     if (a==='close'){ el.hidden = true; return; }
     if (a==='save'){ const en=$('#e-en').value.trim(), ru=$('#e-ru').value.trim(); if(!en||!ru){ $('#e-en').focus(); return; }
-      Object.assign(w, {en, ru, tr:$('#e-tr').value.trim().replace(/^\[|\]$/g,''), ex:$('#e-ex').value.trim()}); LS.set('words',words); dictMsg=['Сохранено: '+en,'ok']; }
+      Object.assign(w, {en, ru, ex:$('#e-ex').value.trim()}); LS.set('words',words); dictMsg=['Сохранено: '+en,'ok']; }
     if (a==='reset'){ Object.assign(w,{box:0, due:TODAY, seen:0}); LS.set('words',words); dictMsg=['«'+w.en+'» снова в новых словах.','ok']; }
     if (a==='del'){ if (!b.dataset.sure){ b.dataset.sure='1'; b.textContent='Точно удалить?'; return; } words = words.filter(x=>x!==w); LS.set('words',words); dictMsg=['Удалено: '+w.en,'ok']; }
     el.hidden = true; renderDict();
@@ -386,8 +373,8 @@ textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;pad
         <div class="field"><label for="s-new">Новых слов в день</label><select id="s-new">${[5,10,15,20,30].map(n=>`<option ${settings.newPerDay===n?'selected':''}>${n}</option>`).join('')}</select></div>
         <div class="field"><label for="s-size">Карточек за раз</label><select id="s-size">${[10,20,30,50].map(n=>`<option ${settings.size===n?'selected':''}>${n}</option>`).join('')}</select></div></div></div>
       <div class="panel"><h3>Добавить много слов сразу</h3>
-        <p class="hint">По одному слову на строку: <b>слово - перевод - транскрипция</b>. Транскрипция необязательна. Сюда же можно вставить блок слов, который пришлю я.</p>
-        <textarea id="bulk" placeholder="journey - путешествие - ˈdʒɜː.ni&#10;borrow - брать взаймы"></textarea>
+        <p class="hint">По одному слову на строку: <b>слово - перевод</b>. Сюда же можно вставить блок слов, который пришлю я.</p>
+        <textarea id="bulk" placeholder="journey - путешествие&#10;borrow - брать взаймы"></textarea>
         <div class="btnrow"><button class="btn acc" data-m="bulk">Добавить</button></div></div>
       <div class="panel"><h3>Отправить Claude</h3><p class="hint">Пришлю новые слова под твой уровень, разберу сложные и подскажу, как их запомнить.</p>
         <textarea readonly id="export-text" aria-label="Выгрузка">${esc(exportText())}</textarea>
@@ -409,9 +396,9 @@ textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;pad
     t.split(/\r?\n/).forEach((line,i)=>{
       const parts = line.split(/\s+[-–—]\s+|\t|\s*\|\s*/).map(s=>s.trim()).filter(Boolean);
       if (parts.length<2) return;
-      let [en, ru, tr=''] = parts; tr = tr.replace(/^[\[\/]|[\]\/]$/g,'');
+      let [en, ru] = parts;
       if (words.some(w=>w.en.toLowerCase()===en.toLowerCase())){ skip++; return; }
-      words.push({id:'w'+Date.now().toString(36)+i, en, ru, tr, ex:'', box:0, due:TODAY, seen:0, right:0, wrong:0, added:TODAY}); n++;
+      words.push({id:'w'+Date.now().toString(36)+i, en, ru, tr:'', ex:'', box:0, due:TODAY, seen:0, right:0, wrong:0, added:TODAY}); n++;
     });
     return skip ? n+' (пропущено повторов: '+skip+')' : n;
   }
@@ -423,7 +410,7 @@ textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;pad
   $('#view-more').addEventListener('click', async ev=>{
     const b = ev.target.closest('[data-m]'); if (!b) return; const a = b.dataset.m;
     if (a==='bulk'){ try{ const n = bulkAdd($('#bulk').value); LS.set('words',words); LS.set('log',log); LS.set('settings',settings);
-        moreMsg = ['Добавлено слов: '+n+'.','ok']; renderMore(); }catch(e){ setMore('Не получилось прочитать. Проверь формат: слово - перевод - транскрипция.','err'); } }
+        moreMsg = ['Добавлено слов: '+n+'.','ok']; renderMore(); }catch(e){ setMore('Не получилось прочитать. Проверь формат: слово - перевод.','err'); } }
     if (a==='share'){ try{ await navigator.share({title:'Английские слова', text:exportText()}); setMore('Отправлено.','ok'); }catch(e){ if(e&&e.name!=='AbortError') setMore('Не получилось. Нажми «Скопировать».','err'); } }
     if (a==='copy'){ try{ await navigator.clipboard.writeText(exportText()); setMore('Скопировано.','ok'); }catch(e){ const t=$('#export-text'); t.focus(); t.select(); setMore('Текст выделен, скопируй вручную.',''); } }
     if (a==='backup'){ download('slova-backup-'+TODAY+'.json', JSON.stringify({words, log, settings})); setMore('Копия сохранена.','ok'); }
