@@ -130,6 +130,23 @@ button.nm{border:0;background:none;padding:0;text-align:left}
 .bigbtn{padding:16px;font-size:17px}
 .donebox{text-align:center;display:flex;flex-direction:column;gap:6px;align-items:center}
 .donebox b{font-family:var(--f-display);font-size:20px}
+textarea.note{font-family:var(--f-body);font-size:15px;min-height:72px}
+/* diary */
+.sum{display:grid;grid-template-columns:1fr auto;gap:4px 10px;font-size:14px}
+.sum b{font-family:var(--f-num)}
+.dday h3{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:4px 2px 6px;display:flex;justify-content:space-between}
+.entries{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.entry{padding:12px 14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.entry:first-child{border-top:0}
+.entry-h{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.entry-h b{font-weight:700}
+.entry-h span{font-family:var(--f-num);font-weight:700;white-space:nowrap}
+.entry .when{font-size:12px;color:var(--muted);font-family:var(--f-num)}
+.entry p{margin:0;font-size:14px;white-space:pre-line;overflow-wrap:anywhere}
+.entry .acts{display:flex;gap:8px}
+.linkbtn{border:0;background:none;padding:0;color:var(--accent);font-weight:600;font-size:13px}
+.linkbtn.del{color:var(--warn)}
+.filter{display:flex;gap:6px;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -142,10 +159,12 @@ button.nm{border:0;background:none;padding:0;text-align:left}
   <div id="main" class="list">
     <div class="tabs" role="tablist">
       <button role="tab" id="tab-today" aria-selected="true">Сегодня</button>
+      <button role="tab" id="tab-diary" aria-selected="false">Дневник</button>
       <button role="tab" id="tab-week" aria-selected="false">Неделя</button>
       <button role="tab" id="tab-edit" aria-selected="false">Настроить</button>
     </div>
     <section id="view-today" class="list"></section>
+    <section id="view-diary" class="list" hidden></section>
     <section id="view-week" class="list" hidden></section>
     <section id="view-edit" class="list" hidden></section>
   </div>
@@ -177,11 +196,13 @@ button.nm{border:0;background:none;padding:0;text-align:left}
     {id:'stretch', name:'Растяжка 10 минут', kind:'check', minutes:10},
     {id:'read', name:'Чтение', kind:'count', target:20, unit:'минут', step:5},
     {id:'meditate', name:'Медитация', kind:'check', minutes:10},
+    {id:'english', name:'Английский', kind:'count', target:30, unit:'минут', step:5, timerMode:'up'},
     {id:'nophone', name:'Без телефона за час до сна', kind:'check'},
     {id:'veg', name:'Овощи', kind:'count', target:3, unit:'порции'}
   ];
   let habits = LS.get('habits');
   let marks = LS.get('marks') || {};
+  let sessions = LS.get('sessions') || [];
   let day = TODAY;
 
   /* ---------- auto marks from sibling apps (same site) ---------- */
@@ -267,7 +288,7 @@ button.nm{border:0;background:none;padding:0;text-align:left}
   function openTimer(h){
     finished = null;
     if (!timer || (timer.hid!==h.id && !timer.run && timer.acc===0) || !habits.some(x=>x.id===timer.hid))
-      timer = {hid:h.id, mode:'down', dur:defMin(h)*60, acc:0, t0:0, run:false};
+      timer = {hid:h.id, mode:h.timerMode||'down', dur:defMin(h)*60, acc:0, t0:0, run:false};
     saveTimer(); renderSheet(); $('#sheet').hidden = false;
   }
   function closeSheet(){ $('#sheet').hidden = true; finished = null; renderToday(); }
@@ -290,15 +311,20 @@ button.nm{border:0;background:none;padding:0;text-align:left}
       else if (h.kind==='count'){ setVal(h, TODAY, val(h,TODAY)+(h.step||1)); note = 'Счётчик «'+h.name+'» увеличен.'; }
       else { setVal(h, TODAY, 1); note = 'Привычка «'+h.name+'» отмечена.'; }
     } else if (h) note = 'Эта привычка отмечается сама по записям в другом приложении.';
-    finished = {name: h?h.name:'', time: fmtT(secs), note};
+    const s = {id:'s'+Date.now().toString(36), hid: timer.hid, name: h?h.name:'', date: TODAY,
+      start: timer.s0 || (Date.now()-secs*1000), secs: Math.round(secs), note:'',
+      added: isMinutes(h||{}) ? Math.max(1, Math.round(secs/60)) : 0};
+    sessions.push(s); LS.set('sessions', sessions);
+    finished = {name: h?h.name:'', time: fmtT(secs), note, sid: s.id};
     timer = null; saveTimer(); keepAwake(false); renderSheet(); renderToday();
   }
   function renderSheet(){
     const el = $('#sheet');
     if (finished){
       el.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-label="Таймер завершён"><div class="sheet-top"><div class="eyebrow">Таймер</div><button class="x" data-t="close" aria-label="Закрыть">×</button></div>
-        <div class="donebox"><b>Готово!</b><span class="num">${finished.time}</span><p class="hint">${esc(finished.note)}</p></div>
-        <button class="btn acc wide" data-t="close">Закрыть</button></div>`; return; }
+        <div class="donebox"><b>Готово!</b><span class="num">${finished.time}</span><p class="hint">${esc(finished.note)} Занятие записано в дневник.</p></div>
+        <div class="field"><label for="s-note">Что делал? (необязательно)</label><textarea id="s-note" class="note" placeholder="например: 20 слов в Anki, серия сериала с субтитрами"></textarea></div>
+        <button class="btn acc wide" data-t="savenote">Сохранить и закрыть</button></div>`; return; }
     if (!timer){ el.hidden = true; return; }
     const h = habits.find(x=>x.id===timer.hid) || {name:'Привычка'}, e = elapsed(), started = e>0 || timer.run;
     const mins = Math.round(timer.dur/60);
@@ -321,10 +347,13 @@ button.nm{border:0;background:none;padding:0;text-align:left}
     const pr = ev.target.closest('[data-preset]'); if (pr && timer){ timer.dur = 60*Number(pr.dataset.preset); saveTimer(); renderSheet(); return; }
     const b = ev.target.closest('[data-t]'); if (!b) return; const a = b.dataset.t;
     if (a==='close'){ closeSheet(); return; }
+    if (a==='savenote'){ const s = sessions.find(x=>x.id===(finished||{}).sid), t = $('#s-note');
+      if (s && t && t.value.trim()){ s.note = t.value.trim(); LS.set('sessions', sessions); }
+      closeSheet(); return; }
     if (!timer) return;
     if (a==='start'){ try{ actx = actx || new (window.AudioContext||window.webkitAudioContext)(); actx.resume(); }catch(e){}
-      if (timer.acc===0 && timer.mode==='down'){ const hh = habits.find(x=>x.id===timer.hid);
-        if (hh && !isMinutes(hh)){ hh.minutes = Math.round(timer.dur/60); LS.set('habits', habits); } }
+      if (timer.acc===0){ timer.s0 = Date.now(); const hh = habits.find(x=>x.id===timer.hid);
+        if (hh){ hh.timerMode = timer.mode; if (timer.mode==='down' && !isMinutes(hh)) hh.minutes = Math.round(timer.dur/60); LS.set('habits', habits); } }
       timer.run = true; timer.t0 = Date.now(); keepAwake(true); }
     if (a==='pause'){ timer.acc = elapsed(); timer.run = false; keepAwake(false); }
     if (a==='reset'){ timer.acc = 0; timer.run = false; keepAwake(false); }
@@ -340,6 +369,70 @@ button.nm{border:0;background:none;padding:0;text-align:left}
   }, 250);
   document.addEventListener('visibilitychange', ()=>{ if (!document.hidden && timer && timer.run) keepAwake(true); });
   document.addEventListener('keydown', e=>{ if (e.key==='Escape' && !$('#sheet').hidden) closeSheet(); });
+
+  /* ---------- diary ---------- */
+  let dFilter = 'all', editing = null, diaryMsg = '';
+  const hm = ms => { const d=new Date(ms); return pad(d.getHours())+':'+pad(d.getMinutes()); };
+  function dur(secs){ secs=Math.round(secs); const h=Math.floor(secs/3600), m=Math.floor(secs%3600/60), s=secs%60;
+    return h ? h+' ч '+m+' мин' : m ? m+' мин'+(s&&m<10?' '+s+' с':'') : s+' с'; }
+  function weekStart(){ const d=new Date(); const k=(d.getDay()+6)%7; d.setDate(d.getDate()-k); return ymd(d); }
+  function renderDiary(){
+    const v = $('#view-diary'), ws = weekStart();
+    const names = [...new Set(sessions.map(s=>s.hid))].map(id=>({id, name:(habits.find(h=>h.id===id)||sessions.find(s=>s.hid===id)).name}));
+    const list = sessions.filter(s=>dFilter==='all'||s.hid===dFilter).sort((a,b)=>b.start-a.start);
+    let h = `<div class="panel"><h3>Эта неделя</h3>`;
+    const wk = {}; sessions.filter(s=>s.date>=ws).forEach(s=>{ (wk[s.hid] ||= {name:s.name,secs:0,n:0}); wk[s.hid].secs+=s.secs; wk[s.hid].n++; });
+    const wl = Object.values(wk);
+    h += wl.length ? `<div class="sum">${wl.map(x=>`<span>${esc(x.name)} · ${x.n} ${plural(x.n,'занятие','занятия','занятий')}</span><b>${dur(x.secs)}</b>`).join('')}</div>`
+      : `<p class="hint">На этой неделе занятий с таймером пока нет. Нажми на привычку на вкладке «Сегодня», запусти секундомер, и занятие появится здесь.</p>`;
+    h += `</div>`;
+    if (names.length>1) h += `<div class="filter chips"><button data-f="all" aria-pressed="${dFilter==='all'}">Все</button>${names.map(n=>`<button data-f="${n.id}" aria-pressed="${dFilter===n.id}">${esc(n.name)}</button>`).join('')}</div>`;
+    if (!list.length) h += `<div class="empty">Записей пока нет.</div>`;
+    const byDay = {}; list.forEach(s=>{ (byDay[s.date] ||= []).push(s); });
+    Object.keys(byDay).sort().reverse().forEach(d=>{
+      const dd = parse(d), tot = byDay[d].reduce((a,s)=>a+s.secs,0);
+      h += `<div class="dday"><h3><span>${d===TODAY?'Сегодня':d===shift(TODAY,-1)?'Вчера':WDL[dd.getDay()]}, ${dd.getDate()} ${MON[dd.getMonth()]}</span><span>${dur(tot)}</span></h3><div class="entries">`;
+      byDay[d].forEach(s=>{
+        h += `<div class="entry"><div class="entry-h"><b>${esc(s.name)}</b><span>${dur(s.secs)}</span></div>
+          <div class="when">${hm(s.start)}–${hm(s.start+s.secs*1000)}</div>
+          ${editing===s.id ? `<textarea class="note" id="edit-note" aria-label="Заметка">${esc(s.note)}</textarea>
+            <div class="acts"><button class="btn small acc" data-save="${s.id}">Сохранить</button><button class="btn small" data-cancel="1">Отмена</button></div>`
+          : `${s.note?`<p>${esc(s.note)}</p>`:''}<div class="acts"><button class="linkbtn" data-edit="${s.id}">${s.note?'Изменить заметку':'Добавить заметку'}</button><button class="linkbtn del" data-del="${s.id}">Удалить</button></div>`}
+        </div>`;
+      });
+      h += `</div></div>`;
+    });
+    h += `<div class="panel"><h3>Добавить занятие вручную</h3><p class="hint">Если занимался без таймера.</p><div class="form">
+      <div class="field full"><label for="m-h">Привычка</label><select id="m-h">${habits.filter(x=>!x.auto).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select></div>
+      <div class="field"><label for="m-date">Дата</label><input id="m-date" type="date" value="${TODAY}" max="${TODAY}"></div>
+      <div class="field"><label for="m-min">Минут</label><input id="m-min" class="num" inputmode="numeric" placeholder="30"></div>
+      <div class="field full"><label for="m-note">Что делал</label><input id="m-note" placeholder="необязательно"></div>
+      <button class="btn acc full" data-manual="1">Записать</button></div><div class="status" id="diary-status">${esc(diaryMsg)}</div></div>`;
+    v.innerHTML = h; diaryMsg = '';
+  }
+  function credit(s, sign){
+    const h = habits.find(x=>x.id===s.hid); if (!h || h.auto) return;
+    if (isMinutes(h)) setVal(h, s.date, Math.max(0, val(h,s.date) + sign*(s.added||Math.max(1,Math.round(s.secs/60)))));
+    else if (h.kind==='count') setVal(h, s.date, Math.max(0, val(h,s.date) + sign*(h.step||1)));
+    else if (sign>0) setVal(h, s.date, 1);
+  }
+  $('#view-diary').addEventListener('click', ev=>{
+    const f = ev.target.closest('[data-f]'); if (f){ dFilter = f.dataset.f; renderDiary(); return; }
+    const e = ev.target.closest('[data-edit]'); if (e){ editing = e.dataset.edit; renderDiary(); const t=$('#edit-note'); if(t) t.focus(); return; }
+    if (ev.target.closest('[data-cancel]')){ editing = null; renderDiary(); return; }
+    const sv = ev.target.closest('[data-save]'); if (sv){ const s = sessions.find(x=>x.id===sv.dataset.save); if (s){ s.note = $('#edit-note').value.trim(); LS.set('sessions',sessions); } editing=null; renderDiary(); return; }
+    const del = ev.target.closest('[data-del]');
+    if (del){ if (!del.dataset.sure){ del.dataset.sure='1'; del.textContent='Точно удалить?'; return; }
+      const i = sessions.findIndex(x=>x.id===del.dataset.del); if (i>=0){ credit(sessions[i], -1); sessions.splice(i,1); LS.set('sessions',sessions); } renderDiary(); return; }
+    if (ev.target.closest('[data-manual]')){
+      const hid = $('#m-h').value, d = $('#m-date').value, m = parseInt($('#m-min').value,10), h = habits.find(x=>x.id===hid);
+      if (!h){ diaryMsg='Сначала добавь привычку.'; renderDiary(); return; }
+      if (!(m>0) || !d || d>TODAY){ const st=$('#diary-status'); st.textContent='Укажи дату не позже сегодня и минуты числом.'; st.className='status err'; return; }
+      const st0 = parse(d); st0.setHours(12,0,0,0);
+      const s = {id:'s'+Date.now().toString(36), hid, name:h.name, date:d, start: d===TODAY ? Date.now()-m*60000 : st0.getTime(), secs:m*60, note:$('#m-note').value.trim(), added: isMinutes(h)?m:0, manual:true};
+      sessions.push(s); credit(s, 1); LS.set('sessions',sessions); diaryMsg = 'Записано: '+h.name+', '+m+' мин.'; renderDiary();
+    }
+  });
 
   /* ---------- week ---------- */
   function renderWeek(){
@@ -387,7 +480,10 @@ button.nm{border:0;background:none;padding:0;text-align:left}
     const lines = ['ПРИВЫЧКИ · выгрузка для Claude', 'Выгружено: '+new Date().toLocaleString('ru-RU'), ''];
     habits.forEach(h=>{ lines.push('■ '+h.name+(h.kind==='count'?' (цель '+h.target+' '+(h.unit||'')+')':'')+' · серия '+streak(h)+' · рекорд '+bestStreak(h));
       lines.push('  '+days.map(d=>d.slice(5)+':'+(h.kind==='count'?val(h,d):(isDone(h,d)?'✓':'·'))).join(' ')); });
-    lines.push('', '---JSON---', JSON.stringify({habits, marks: Object.fromEntries(days.filter(d=>marks[d]).map(d=>[d,marks[d]]))}));
+    const ss = sessions.filter(s=>s.date>=days[0]).sort((a,b)=>a.start-b.start);
+    if (ss.length){ lines.push('', 'Занятия с таймером:');
+      ss.forEach(s=>lines.push('  '+s.date+' '+hm(s.start)+' · '+s.name+' · '+dur(s.secs)+(s.note?' · «'+s.note+'»':''))); }
+    lines.push('', '---JSON---', JSON.stringify({habits, marks: Object.fromEntries(days.filter(d=>marks[d]).map(d=>[d,marks[d]])), sessions: ss}));
     return lines.join('\n');
   }
   function download(name, text){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'})); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},1000); }
@@ -407,23 +503,24 @@ button.nm{border:0;background:none;padding:0;text-align:left}
     const x = ev.target.closest('[data-x]'); if (!x) return;
     if (x.dataset.x==='share'){ try{ await navigator.share({title:'Привычки', text:exportText()}); setMsg('Отправлено.','ok'); }catch(e){ if(e&&e.name!=='AbortError') setMsg('Не получилось. Нажми «Скопировать».','err'); } }
     if (x.dataset.x==='copy'){ try{ await navigator.clipboard.writeText(exportText()); setMsg('Скопировано.','ok'); }catch(e){ const t=$('#export-text'); t.focus(); t.select(); setMsg('Текст выделен, скопируй вручную.',''); } }
-    if (x.dataset.x==='backup'){ download('privychki-backup-'+TODAY+'.json', JSON.stringify({habits, marks},null,1)); setMsg('Копия сохранена.','ok'); }
+    if (x.dataset.x==='backup'){ download('privychki-backup-'+TODAY+'.json', JSON.stringify({habits, marks, sessions},null,1)); setMsg('Копия сохранена.','ok'); }
     if (x.dataset.x==='import'){
       const s = $('#import-text').value, i=s.indexOf('{'), j=s.lastIndexOf('}');
       try{ if(i<0||j<i) throw 0; const o = JSON.parse(s.slice(i,j+1)); let n=0;
         if (Array.isArray(o.habits)){ habits = o.habits.filter(h=>h&&h.id&&h.name); LS.set('habits',habits); n++; }
         if (o.marks && typeof o.marks==='object'){ Object.entries(o.marks).forEach(([d,m])=>{ marks[d]=Object.assign(marks[d]||{}, m); }); LS.set('marks',marks); n++; }
+        if (Array.isArray(o.sessions)){ o.sessions.forEach(s=>{ if (s&&s.id&&!sessions.some(x=>x.id===s.id)) sessions.push(s); }); LS.set('sessions',sessions); n++; }
         if (!n) throw 0; setMsg('Загружено.','ok'); renderEdit();
       }catch(e){ setMsg('Не получилось прочитать. Скопируй блок целиком, от «{» до «}».','err'); }
     }
   });
 
   /* ---------- nav ---------- */
-  const tabs = ['today','week','edit'];
+  const tabs = ['today','diary','week','edit'];
   function show(t){
     $('#view-setup').hidden = true; $('#main').hidden = false;
     tabs.forEach(o=>{ $('#tab-'+o).setAttribute('aria-selected', o===t); $('#view-'+o).hidden = o!==t; });
-    if (t==='today') renderToday(); if (t==='week') renderWeek(); if (t==='edit') renderEdit();
+    if (t==='today') renderToday(); if (t==='diary') renderDiary(); if (t==='week') renderWeek(); if (t==='edit') renderEdit();
   }
   tabs.forEach(t=>$('#tab-'+t).addEventListener('click',()=>show(t)));
   window.addEventListener('pageshow', ()=>{ if (habits && !$('#view-today').hidden) renderToday(); });
