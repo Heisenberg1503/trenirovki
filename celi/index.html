@@ -298,6 +298,7 @@ body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
 
   render();
   const t = tState(); if (t && t.run && G(t.gid)) renderTimer(G(t.gid));
+  if (location.hash.indexOf('#t-')===0){ const g = G(location.hash.slice(3)); history.replaceState(null,'',location.pathname); if (g) openTimer(g); }
   window.addEventListener('pageshow', render);
 })();
 </script>

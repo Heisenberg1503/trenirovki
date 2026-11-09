@@ -176,6 +176,38 @@ body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
 .grow .gb i{display:block;height:100%;background:var(--accent)}
 .grow b{font-family:var(--f-num);font-size:12px;color:var(--muted);text-align:right;white-space:nowrap}
 .grow.met b{color:var(--accent)}
+/* combined day list */
+.strip{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.wds{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.wd{border:0;background:none;padding:4px 0;border-radius:10px;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--muted)}
+.wd span{font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+.wd b{font-family:var(--f-num);font-size:12px;color:var(--ink)}
+.wd i{width:28px;height:28px;border-radius:50%;background:conic-gradient(var(--accent) var(--p), var(--line) 0);position:relative}
+.wd i::after{content:"";position:absolute;inset:5px;border-radius:50%;background:var(--surface)}
+.wd i.full::after{background:var(--accent)}
+.wd i.fut{background:none;border:2px dashed var(--line)}
+.wd i.fut::after{display:none}
+.wd.sel{background:var(--accent-soft)}
+.wd.today b{color:var(--accent)}
+.sline{display:flex;justify-content:space-between;font-size:14px;color:var(--muted)}
+.sline b{color:var(--ink)}
+.pbar{height:6px;border-radius:999px;background:var(--line);overflow:hidden}
+.pbar i{display:block;height:100%;background:var(--accent)}
+.hl{display:flex;flex-direction:column}
+.hr{display:grid;grid-template-columns:34px 1fr 36px;gap:8px;align-items:center;padding:7px 0;border-bottom:1px dashed var(--line)}
+.hr.task{display:block;padding:0}
+.hr.task .e{border-bottom:0;padding:7px 0;grid-template-columns:34px 1fr}
+.hc{width:28px;height:28px;border-radius:8px;border:2px solid var(--line);background:none;color:transparent;font-weight:700;display:grid;place-items:center;padding:0}
+.hr.done .hc{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.ht{min-width:0;display:flex;flex-direction:column}
+.ht b{font-weight:600;line-height:1.3;overflow-wrap:anywhere}
+.ht small{color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+.hr.done .ht b{color:var(--done);text-decoration:line-through}
+.hp{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);display:grid;place-items:center;text-decoration:none;color:var(--accent);font-size:13px}
+.hr.done .hp{opacity:.5}
+.hsep{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;padding:12px 0 2px}
+.pg{display:flex;gap:6px;margin-top:6px}
+.pg input{width:90px;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 8px}
 </style>
 </head>
 <body>
@@ -184,8 +216,6 @@ body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
     <div class="eyebrow" id="hello">Мой компаньон</div>
     <h1>Дневник</h1>
   </header>
-  <section id="streaks" class="streaks" aria-label="Серии за неделю"></section>
-  <section id="goalsNow" class="gnow" aria-label="Цели в работе"></section>
   <div class="tabs" role="tablist">
     <button role="tab" id="tab-day" aria-selected="true">День</button>
     <button role="tab" id="tab-week" aria-selected="false">Неделя</button>
@@ -306,20 +336,121 @@ body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
   }
 
   /* ---------- day ---------- */
+  /* ---------- day: one combined list of everything to do ---------- */
+  let bookOpen = null;
+  const manualGet = () => raw('home-manual') || {};
+  const manualPut = v => { try{ localStorage.setItem('home-manual', JSON.stringify(v)); }catch(e){} };
+  function homeCtx(){
+    const GC = window.GoalsCore;
+    const goals = GC ? GC.load() : []; if (GC) GC.syncSteps(goals);
+    return {GC, goals, c: GC ? GC.ctx() : null, plan: raw('plan'), habits: (raw('hab-habits')||[]).filter(h=>!h.auto), marks: raw('hab-marks')||{},
+      settings: raw('slv-settings')||{}, manual: manualGet()};
+  }
+  /* items for date d (tasks from the diary are handled separately) */
+  function buildItems(d, H){
+    const items = [], c = H.c, dow = parse(d).getDay(), weekday = dow%6!==0;
+    if (!c) return items;
+    /* workout */
+    const wl = c.logs[d], wDone = c.workout(d) || !!(H.manual[d]||{}).workout;
+    let wsub = '';
+    if (wl && c.workout(d)){ const sets=(wl.exercises||[]).flatMap(e=>e.sets||[]); wsub = 'подходов '+sets.filter(s=>s.done).length+' из '+sets.length+(wl.feeling?' · ощущения '+wl.feeling+'/5':''); }
+    else if (H.plan){ if (H.plan.date===d) wsub = H.plan.title||''; else { const w=(H.plan.week||[]).find(x=>x.day===WD[dow]); if (w) wsub = w.focus; } }
+    items.push({key:'workout', title:'Тренировка'+(wl&&wl.planTitle?': '+wl.planTitle:''), sub:wsub, done:wDone, play:'trening/'});
+    /* words */
+    if (c.words.length){
+      const L = c.wlog[d]||{}, due = c.words.filter(w=>w.seen && w.box<5 && w.due<=d).length;
+      const fresh = Math.min(Math.max(0,(H.settings.newPerDay||10)-(L.new||0)), c.words.filter(w=>!w.seen && w.box===0).length);
+      items.push({key:'words', title: L.reviews ? 'Слова: '+L.reviews+' '+plural(L.reviews,'карточка','карточки','карточек') : 'Слова',
+        sub: L.reviews ? (L.new?'новых '+L.new+' · ':'')+Math.max(1,Math.round((L.secs||0)/60))+' мин' : (d===TODAY ? 'повторить '+due+', новых '+fresh : ''),
+        done: !!L.reviews, play:'slova/', noCheck:true});
+    }
+    /* goals with a rhythm */
+    H.goals.filter(g=>g.status==='active').forEach(g=>{
+      const logs = (g.log||[]).filter(l=>l.date===d), did = logs.length>0;
+      if (g.type==='weekly' && (weekday || did)){
+        const next = (g.steps||[]).find(s=>!s.done);
+        items.push({key:'g:'+g.id, title:g.title, sub: next ? 'следующий шаг: '+next.text : (g.note||''), done:did, play:'celi/#t-'+g.id});
+      }
+      if (g.type==='units'){
+        const doneN = (g.log||[]).reduce((a,l)=>a+(l.n||0),0), wk = H.GC.weekCount(g, c, H.goals, Array.from({length:7},(_,i)=>addD(monday(d),i)));
+        if (did || (weekday && wk < g.perWeek && doneN < g.total))
+          items.push({key:'g:'+g.id, title:g.title, sub:(g.unit||'юнит')+' '+Math.min(g.total, doneN+(did?0:1))+' из '+g.total+' · за неделю '+wk+'/'+g.perWeek, done:did, play:'celi/#t-'+g.id});
+      }
+      if (g.type==='book' && g.total){
+        const cur = Math.max(0, ...(g.log||[]).map(l=>l.value||0));
+        if (cur < g.total || did) items.push({key:'g:'+g.id, title:'Читать: '+g.title, sub:'стр. '+cur+' из '+g.total, done:did, play:'celi/#t-'+g.id, book:g.id, cur});
+      }
+    });
+    /* habits */
+    H.habits.forEach(h=>{
+      const t = h.kind==='count' ? (h.target||1) : 1, v = (H.marks[d]||{})[h.id]||0;
+      const timed = h.minutes || (h.kind==='count' && /мин/i.test(h.unit||''));
+      items.push({key:'h:'+h.id, title:h.name+(h.kind==='count'?' '+v+'/'+t:''), sub:h.kind==='count'?(h.unit||''):'', done:v>=t, play: timed?'privychki/':null, habit:h});
+    });
+    return items;
+  }
+  function dayFrac(d, H){
+    const items = buildItems(d, H), tasks = forDay(d).filter(e=>e.type==='task' && (e.state==='open'||e.state==='done'));
+    const total = items.length + tasks.length; if (!total) return null;
+    return (items.filter(i=>i.done).length + tasks.filter(e=>e.state==='done').length) / total;
+  }
+  function homeRow(it){
+    const open = bookOpen && it.book===bookOpen;
+    return `<div class="hr${it.done?' done':''}"><button class="hc" data-hcheck="${it.key}" aria-pressed="${it.done}" aria-label="${esc(it.title)}">✓</button>
+      <div class="ht"><b>${esc(it.title)}</b>${it.sub?`<small>${esc(it.sub)}</small>`:''}
+        ${open?`<span class="pg"><input id="hp-${it.book}" class="num" inputmode="numeric" value="${it.cur||''}" aria-label="Страница"><button class="btn small" data-hpage="${it.book}">Сохранить</button></span><small>На какой странице остановился?</small>`:''}</div>
+      ${it.play?`<a class="hp" href="${it.play}" aria-label="Открыть: ${esc(it.title)}">▶</a>`:'<span></span>'}</div>`;
+  }
   function renderDay(){
-    const list = forDay(day), d = parse(day);
+    const H = homeCtx(), d = parse(day), items = buildItems(day, H);
+    const tasks = forDay(day).filter(e=>e.type==='task'), other = forDay(day).filter(e=>e.type!=='task');
+    const live = tasks.filter(e=>e.state==='open'||e.state==='done');
+    const total = items.length + live.length, done = items.filter(i=>i.done).length + live.filter(e=>e.state==='done').length;
     const open = day===TODAY ? entries.filter(e=>e.type==='task' && e.state==='open' && e.date && e.date<TODAY) : [];
-    const monthTasks = day===TODAY ? forMonth(ym(d)).filter(e=>e.type==='task'&&e.state==='open') : [];
+    /* week strip */
+    const m = monday(day), wdays = Array.from({length:7},(_,i)=>addD(m,i));
+    const strip = wdays.map(x=>{ const f = x<=TODAY ? dayFrac(x, H) : null, p = f===null?0:Math.round(f*100), dd = parse(x);
+      return `<button class="wd${x===day?' sel':''}${x===TODAY?' today':''}" data-open-day="${x}" aria-label="${dayTitle(x)}: ${f===null?'нет данных':p+'%'}"><span>${WD[dd.getDay()]}</span><i style="--p:${p}%" class="${x>TODAY?'fut':p>=80?'full':''}"></i><b>${dd.getDate()}</b></button>`; }).join('');
+    let streak = 0, s = (dayFrac(TODAY,H)||0)>=0.8 ? TODAY : addD(TODAY,-1);
+    while (streak<365){ const f = dayFrac(s,H); if (f===null || f<0.8) break; streak++; s = addD(s,-1); }
     let h = `<div class="nav"><button class="arrow" data-day="-1" aria-label="Предыдущий день">‹</button>
-      <div class="ttl"><b>${dayTitle(day)}</b><span>${relName(day)}${day!==TODAY?` · <button class="today-link" data-day="0">к сегодня</button>`:''}</span></div>
-      <button class="arrow" data-day="1" aria-label="Следующий день">›</button></div>`;
-    h += autoBlock(day);
+      <div class="ttl"><b>${relName(day)==='Сегодня'?'Сегодня':dayTitle(day)}</b><span>${WDL[d.getDay()]}, ${dayTitle(day)}${day!==TODAY?` · <button class="today-link" data-day="0">к сегодня</button>`:''}</span></div>
+      <button class="arrow" data-day="1" aria-label="Следующий день">›</button></div>
+      <div class="strip"><div class="wds">${strip}</div><div class="sline"><span>Сделано <b class="num">${done} из ${total}</b></span><span>серия <b class="num">${streak}</b> ${plural(streak,'день','дня','дней')}</span></div>
+      <div class="pbar"><i style="width:${total?Math.round(done/total*100):0}%"></i></div></div>`;
     if (open.length) h += `<div class="mig"><b>Незакрытые задачи с прошлых дней: ${open.length}</b>
-      ${open.slice(0,8).map(e=>`<div class="row"><span>${esc(e.text)}<br><small>${dayTitle(e.date)}</small></span><div class="btnrow"><button class="btn small" data-mig="${e.id}">Сюда</button><button class="btn small" data-x="${e.id}" aria-label="Отменить задачу">✕</button></div></div>`).join('')}
+      ${open.slice(0,6).map(e=>`<div class="row"><span>${esc(e.text)}<br><small>${dayTitle(e.date)}</small></span><div class="btnrow"><button class="btn small" data-mig="${e.id}">Сюда</button><button class="btn small" data-x="${e.id}" aria-label="Неактуально">✕</button></div></div>`).join('')}
       ${open.length>1?`<button class="btn small" data-migall="1">Перенести все на сегодня</button>`:''}</div>`;
-    h += `<div class="page">${list.length?`<div class="entries">${list.map(entryHTML).join('')}</div>`:'<div class="empty">Записей нет. Добавь первую ниже.</div>'}</div>` + addBox('day');
-    if (monthTasks.length) h += `<div class="page"><h3>Задачи на ${MONN[d.getMonth()].toLowerCase()}</h3><div class="entries">${monthTasks.map(entryHTML).join('')}</div><p class="hint">Нажми на задачу, чтобы взять её на сегодня.</p></div>`;
+    /* one list: undone first, done at the bottom */
+    const rows = items.map(it=>({done:it.done, html:homeRow(it)})).concat(tasks.map(e=>({done:e.state!=='open', html:`<div class="hr task">${entryHTML(e)}</div>`})));
+    const undone = rows.filter(r=>!r.done), fin = rows.filter(r=>r.done);
+    h += `<div class="page"><div class="eyebrow">${day===TODAY?'Сегодня':'План дня'}</div><div class="hl">${undone.map(r=>r.html).join('')}${fin.length?`<div class="hsep">Сделано</div>`+fin.map(r=>r.html).join(''):''}</div>
+      ${!rows.length?'<div class="empty">На этот день ничего нет.</div>':''}</div>`;
+    h += `<div class="page"><div class="eyebrow">Заметки и события</div>${other.length?`<div class="entries">${other.map(entryHTML).join('')}</div>`:'<div class="empty">Пусто. Событие ○ или заметку – можно добавить ниже.</div>'}</div>` + addBox('day');
     $('#view-day').innerHTML = h;
+  }
+  function homeCheck(key){
+    const H = homeCtx();
+    if (key==='workout'){ const m = H.manual; const c = H.c;
+      if (c && c.workout(day)) { location.href = 'trening/'; return; }
+      (m[day] ||= {}).workout = !(m[day]||{}).workout; manualPut(m); render(); return; }
+    if (key==='words'){ location.href = 'slova/'; return; }
+    if (key.startsWith('h:')){ const h = H.habits.find(x=>x.id===key.slice(2)); if (!h) return;
+      const t = h.kind==='count' ? (h.target||1) : 1, v = (H.marks[day]||{})[h.id]||0;
+      (H.marks[day] ||= {})[h.id] = v>=t ? 0 : t; try{ localStorage.setItem('hab-marks', JSON.stringify(H.marks)); }catch(e){} render(); return; }
+    if (key.startsWith('g:')){ const g = H.goals.find(x=>x.id===key.slice(2)); if (!g) return;
+      const has = (g.log||[]).some(l=>l.date===day);
+      if (g.type==='book' && !has){ bookOpen = bookOpen===g.id ? null : g.id; render(); const i=$('#hp-'+g.id); if (i){ i.focus(); i.select(); } return; }
+      if (has) g.log = g.log.filter(l=>!(l.date===day && !l.secs));
+      else g.log.push(g.type==='units' ? {date:day, n:1} : {date:day, value:1});
+      H.GC.save(H.goals); render(); }
+  }
+  function homePage(id){
+    const H = homeCtx(), g = H.goals.find(x=>x.id===id), v = parseInt($('#hp-'+id).value,10);
+    if (!g || !(v>=0)){ $('#hp-'+id).focus(); return; }
+    g.log.push({date:day, value:v}); if (!g.startedAt) g.startedAt = day;
+    if (g.total && v>=g.total){ g.status='done'; g.finishedAt=day; }
+    H.GC.save(H.goals); bookOpen = null; render();
   }
 
   /* ---------- week ---------- */
@@ -401,6 +532,8 @@ body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
   document.addEventListener('keydown', e=>{ if (e.key==='Escape') $('#sheet').hidden = true; });
 
   function onClick(ev){
+    const hc = ev.target.closest('[data-hcheck]'); if (hc){ homeCheck(hc.dataset.hcheck); return; }
+    const hp = ev.target.closest('[data-hpage]'); if (hp){ homePage(hp.dataset.hpage); return; }
     const tp = ev.target.closest('[data-type]'); if (tp){ addType = tp.dataset.type; const v=$('#add-day')||$('#add-month'); const keep = v?v.value:''; render(); const n=$('#add-day')||$('#add-month'); if(n){ n.value=keep; n.focus(); } return; }
     const ad = ev.target.closest('[data-add]'); if (ad){ addEntry(ad.dataset.add); return; }
     const tk = ev.target.closest('[data-tick]'); if (tk){ const e = entries.find(x=>x.id===tk.dataset.tick); if (e && e.type==='task'){ e.state = e.state==='done'?'open':'done'; save(); render(); } return; }
@@ -413,7 +546,7 @@ body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
     const mn = ev.target.closest('[data-month]'); if (mn){ const k=+mn.dataset.month; month = k===0?ym(new Date()):addM(month,k); renderMonth(); return; }
     const od = ev.target.closest('[data-open-day]'); if (od){ day = od.dataset.openDay; show('day'); return; }
   }
-  ['#view-day','#view-week','#view-month','#streaks'].forEach(s=>{
+  ['#view-day','#view-week','#view-month'].forEach(s=>{
     $(s).addEventListener('click', onClick);
     $(s).addEventListener('keydown', ev=>{ if (ev.key==='Enter' && /^add-/.test(ev.target.id||'')){ ev.preventDefault(); addEntry(ev.target.id.slice(4)); } });
   });
@@ -462,7 +595,7 @@ body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
 
   /* ---------- nav ---------- */
   const tabs = ['day','week','month','more']; let cur = 'day';
-  function render(){ renderStreaks(); renderGoalsNow(); if (cur==='day') renderDay(); if (cur==='week') renderWeek(); if (cur==='month') renderMonth(); if (cur==='more') renderMore(); }
+  function render(){ if (cur==='day') renderDay(); if (cur==='week') renderWeek(); if (cur==='month') renderMonth(); if (cur==='more') renderMore(); }
   function show(t){ if (t!==cur) addType = 'task'; cur = t; tabs.forEach(o=>{ $('#tab-'+o).setAttribute('aria-selected', o===t); $('#view-'+o).hidden = o!==t; }); render(); window.scrollTo(0,0); }
   tabs.forEach(t=>$('#tab-'+t).addEventListener('click',()=>show(t)));
   show('day');
