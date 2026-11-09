@@ -164,6 +164,18 @@ textarea.mono{font-family:var(--f-num);font-size:12px;min-height:110px}
 .tabbar a svg{width:23px;height:23px}
 .tabbar a[aria-current="page"]{color:var(--accent)}
 body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
+/* active goals on the home screen */
+.gnow{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.gnow:empty{display:none}
+.gnow .gh{display:flex;justify-content:space-between;align-items:baseline}
+.gnow .gh a{font-size:13px;font-weight:600;color:var(--accent);text-decoration:none}
+.grow{display:grid;grid-template-columns:minmax(0,1fr) 72px auto;gap:10px;align-items:center;padding:5px 0;text-decoration:none;color:var(--ink);border-top:1px dashed var(--line)}
+.grow:nth-child(2){border-top:0}
+.grow span{font-size:14px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grow .gb{height:6px;border-radius:999px;background:var(--line);overflow:hidden}
+.grow .gb i{display:block;height:100%;background:var(--accent)}
+.grow b{font-family:var(--f-num);font-size:12px;color:var(--muted);text-align:right;white-space:nowrap}
+.grow.met b{color:var(--accent)}
 </style>
 </head>
 <body>
@@ -173,6 +185,7 @@ body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
     <h1>Дневник</h1>
   </header>
   <section id="streaks" class="streaks" aria-label="Серии за неделю"></section>
+  <section id="goalsNow" class="gnow" aria-label="Цели в работе"></section>
   <div class="tabs" role="tablist">
     <button role="tab" id="tab-day" aria-selected="true">День</button>
     <button role="tab" id="tab-week" aria-selected="false">Неделя</button>
@@ -185,7 +198,8 @@ body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
   <section id="view-more" class="list" hidden></section>
 </div>
 <div id="sheet" class="sheet-bg" hidden></div>
-<nav class="tabbar" aria-label="Разделы"><div><a href="./" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/><path d="M9 8h6"/></svg><span>Дневник</span></a><a href="trening/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/></svg><span>Тренировка</span></a><a href="privychki/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg><span>Привычки</span></a><a href="slova/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="13" height="14" rx="2"/><path d="M8 5V3h11a2 2 0 0 1 2 2v12h-5"/><path d="m6.5 15 3-7 3 7M7.5 13h4"/></svg><span>Слова</span></a><a href="obmen/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10l5-5 5 5M12 5v10"/><path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/></svg><span>Claude</span></a></div></nav>
+<nav class="tabbar" aria-label="Разделы"><div><a href="./" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/><path d="M9 8h6"/></svg><span>Дневник</span></a><a href="celi/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg><span>Цели</span></a><a href="trening/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/></svg><span>Тренировка</span></a><a href="privychki/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg><span>Привычки</span></a><a href="slova/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="13" height="14" rx="2"/><path d="M8 5V3h11a2 2 0 0 1 2 2v12h-5"/><path d="m6.5 15 3-7 3 7M7.5 13h4"/></svg><span>Слова</span></a></div></nav>
+<script src="goals-core.js"></script>
 <script>
 (function(){
   const $ = s => document.querySelector(s);
@@ -226,7 +240,7 @@ body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
 
   function entryHTML(e){
     const canTick = e.type==='task' && (e.state==='open'||e.state==='done');
-    const meta = e.state==='migrated' ? 'перенесено на '+(e.to||'') : e.state==='scheduled' ? 'запланировано: '+(e.to||'') : '';
+    const meta = e.goalTitle && e.state==='open' ? 'цель: '+e.goalTitle : e.state==='migrated' ? 'перенесено на '+(e.to||'') : e.state==='scheduled' ? 'запланировано: '+(e.to||'') : '';
     return `<div class="e ${e.type} ${e.state}${e.pri?' pri':''}"><button class="sig" data-tick="${e.id}" ${canTick?'':'disabled'} aria-label="${canTick?(e.state==='done'?'Снять отметку':'Отметить выполненной'):'Тип записи'}">${sig(e)}</button>
       <button class="txt" data-edit="${e.id}">${esc(e.text)}${meta?`<span class="meta">${esc(meta)}</span>`:''}</button></div>`;
   }
@@ -267,6 +281,16 @@ body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
       h += `<a class="sg-l" href="${r.href}">${r.label}</a>` + days.map(d=>{ if (d>TODAY) return '<i class="fut"></i>'; const v = r.cell(d);
         return `<i class="${v===null?'na':v>=1?'full':v>0?'part':''}" title="${dayTitle(d)}"></i>`; }).join('') + `<b class="sg-n${n?' on':''}" title="Дней подряд">${n}</b>`; });
     $('#streaks').innerHTML = h + `</div>`;
+  }
+  function renderGoalsNow(){
+    const GC = window.GoalsCore; if (!GC) return;
+    const goals = GC.load(); GC.syncSteps(goals);
+    const c = GC.ctx(), act = goals.filter(g=>g.status==='active');
+    if (!act.length){ $('#goalsNow').innerHTML = ''; return; }
+    const short = (g,s) => s.week ? s.week.done+'/'+s.week.norm+' нед.' : s.needsTotal ? 'страниц?' : Math.round(s.pct*100)+'%';
+    $('#goalsNow').innerHTML = `<div class="gh"><span class="eyebrow">Цели в работе</span><a href="celi/">Все цели →</a></div>` +
+      act.map(g=>{ const s = GC.summary(g, c, goals), met = s.week && s.week.done>=s.week.norm;
+        return `<a class="grow${met?' met':''}" href="celi/"><span>${esc(g.title)}</span><span class="gb"><i style="width:${Math.round(s.pct*100)}%"></i></span><b>${short(g,s)}</b></a>`; }).join('');
   }
   function autoBlock(d){
     snap(); const lines = [];
@@ -333,7 +357,7 @@ body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
   }
 
   /* ---------- actions ---------- */
-  function migrateTo(e, date){ const c = {id:uid(), type:e.type, text:e.text, state:'open', pri:e.pri, date, created:Date.now()};
+  function migrateTo(e, date){ const c = {id:uid(), type:e.type, text:e.text, state:'open', pri:e.pri, date, created:Date.now(), goalId:e.goalId, goalTitle:e.goalTitle, stepId:e.stepId};
     e.state = 'migrated'; e.to = dayTitle(date); entries.push(c); }
   function scheduleTo(e, m){ const c = {id:uid(), type:e.type, text:e.text, state:'open', pri:e.pri, month:m, created:Date.now()};
     e.state = 'scheduled'; e.to = MONN[parse(m+'-01').getMonth()].toLowerCase(); entries.push(c); }
@@ -418,7 +442,7 @@ body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
         <span><b>•</b> задача</span><span><b>×</b> выполнена</span><span><b>&gt;</b> перенесена на день</span><span><b>&lt;</b> перенесена в месяц</span>
         <span><b>○</b> событие</span><span><b>–</b> заметка</span><span><b style="color:var(--pri)">*</b> важно</span><span><s>текст</s> неактуально</span></div>
         <p class="hint">Пиши коротко, одной строкой. Каждое утро на странице «День» появятся незакрытые задачи с прошлых дней: перенеси нужные на сегодня, а лишние отметь как неактуальные. Задачи без точной даты пиши на странице «Месяц».</p></div>
-      <div class="page"><h3>Claude и копия</h3><p class="hint">Общая выгрузка всего приложения для Claude, загрузка планов от Claude и резервная копия — во вкладке <a href="obmen/">Claude</a> внизу.</p></div>
+      <div class="page"><h3>Claude и копия</h3><p class="hint">Одна выгрузка всего приложения для Claude, загрузка планов от Claude и резервная копия.</p><a class="btn acc" href="obmen/" style="text-decoration:none;text-align:center">Открыть обмен с Claude</a></div>
       <div class="status ${moreMsg[1]}" id="more-status">${esc(moreMsg[0])}</div>`;
     moreMsg = ['',''];
   }
@@ -438,7 +462,7 @@ body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
 
   /* ---------- nav ---------- */
   const tabs = ['day','week','month','more']; let cur = 'day';
-  function render(){ renderStreaks(); if (cur==='day') renderDay(); if (cur==='week') renderWeek(); if (cur==='month') renderMonth(); if (cur==='more') renderMore(); }
+  function render(){ renderStreaks(); renderGoalsNow(); if (cur==='day') renderDay(); if (cur==='week') renderWeek(); if (cur==='month') renderMonth(); if (cur==='more') renderMore(); }
   function show(t){ if (t!==cur) addType = 'task'; cur = t; tabs.forEach(o=>{ $('#tab-'+o).setAttribute('aria-selected', o===t); $('#view-'+o).hidden = o!==t; }); render(); window.scrollTo(0,0); }
   tabs.forEach(t=>$('#tab-'+t).addEventListener('click',()=>show(t)));
   show('day');

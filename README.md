@@ -7,3 +7,4 @@
 - Привычки: privychki/
 - Английские слова: slova/
 - Обмен с Claude: obmen/
+- Цели: celi/

@@ -1,9 +1,9 @@
-const C = 'kompanyon-v1';
+const C = 'kompanyon-v2';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-512.png',
   './trening/', './trening/index.html', './trening/icon-180.png',
   './privychki/', './privychki/index.html', './privychki/icon-180.png',
   './slova/', './slova/index.html', './slova/words.js', './slova/icon-180.png',
-  './obmen/', './obmen/index.html'];
+  './obmen/', './obmen/index.html', './celi/', './celi/index.html', './goals-core.js'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(C).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(k => Promise.all(k.filter(x => x !== C).map(x => caches.delete(x)))));
