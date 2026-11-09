@@ -5,648 +5,443 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Тренировки">
-<meta name="theme-color" content="#EEF1F4">
+<meta name="apple-mobile-web-app-title" content="Компаньон">
+<meta name="theme-color" content="#F5F4EF">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Дневник тренировок</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<title>Мой компаньон</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
-/* Layout: one narrow column like a coach's clipboard — plan on top, sets as tappable counters, history below a tab switch */
+/* Layout: a dotted notebook page; day / week / month spreads as tabs, rapid-log lines with signifiers in a fixed left column */
 :root{
-  --bg:#EEF1F4; --surface:#FFFFFF; --ink:#16202A; --muted:#5E6B78; --line:#D8DEE5;
-  --accent:#2448D8; --accent-ink:#FFFFFF; --accent-soft:#E3E9FD;
-  --done:#1E8A5A; --done-soft:#DDF2E7; --warn:#B4580E;
-  --f-display:"Unbounded","Manrope",system-ui,sans-serif;
+  --bg:#F5F4EF; --dot:#D3D1C6; --surface:#FFFFFF; --ink:#1D2033; --muted:#6B6D7A; --line:#E1DFD6;
+  --accent:#2E3A8C; --accent-ink:#FFFFFF; --accent-soft:#E3E6F6; --pri:#B4400E; --done:#9A9CA8;
+  --f-hand:"Caveat","Segoe Print",cursive;
   --f-body:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-num:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0F151C; --surface:#18212B; --ink:#E8EDF2; --muted:#93A1AE; --line:#2A3542;
-  --accent:#7D98FF; --accent-ink:#0B1020; --accent-soft:#1F2A4D;
-  --done:#4CC98A; --done-soft:#173628; --warn:#F0A060; color-scheme:dark}}
+  --bg:#14151C; --dot:#2C2E3A; --surface:#1C1E28; --ink:#E9EAF2; --muted:#9A9DAD; --line:#2E3140;
+  --accent:#9AA8F5; --accent-ink:#10132A; --accent-soft:#262C4D; --pri:#F0A060; --done:#6A6D7D; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#0F151C; --surface:#18212B; --ink:#E8EDF2; --muted:#93A1AE; --line:#2A3542;
-  --accent:#7D98FF; --accent-ink:#0B1020; --accent-soft:#1F2A4D;
-  --done:#4CC98A; --done-soft:#173628; --warn:#F0A060; color-scheme:dark}
-
+  --bg:#14151C; --dot:#2C2E3A; --surface:#1C1E28; --ink:#E9EAF2; --muted:#9A9DAD; --line:#2E3140;
+  --accent:#9AA8F5; --accent-ink:#10132A; --accent-soft:#262C4D; --pri:#F0A060; --done:#6A6D7D; color-scheme:dark}
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 [hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%}
 *{box-sizing:border-box}
-body{margin:0}
-body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;
+body{margin:0;background-color:var(--bg);background-image:radial-gradient(var(--dot) 1.1px, transparent 1.2px);background-size:22px 22px;
+  color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
-.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
 h1,h2,h3{margin:0;text-wrap:balance}
-button,input,textarea{font:inherit;color:inherit}
+button,input,textarea,select{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
-
-header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+header{display:flex;flex-direction:column;gap:4px}
 .eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
-h1{font-family:var(--f-display);font-weight:700;font-size:26px;line-height:1.15}
-.streak{display:flex;align-items:baseline;gap:6px}
-.streak b{font-family:var(--f-display);font-size:30px;color:var(--accent);line-height:1}
-.streak span{font-size:13px;color:var(--muted)}
-
-.strip{display:grid;grid-template-columns:repeat(14,1fr);gap:4px}
-.strip i{display:block;aspect-ratio:1;border-radius:4px;background:var(--line);max-width:100%}
-.strip i.on{background:var(--done)}
-.strip i.today{outline:2px solid var(--accent);outline-offset:1px}
-.strip-legend{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px}
-
+h1{font-family:var(--f-hand);font-weight:700;font-size:40px;line-height:1}
+.links{display:flex;gap:12px;flex-wrap:wrap}
+.links a{font-size:13px;font-weight:600;color:var(--accent);text-decoration:none}
 .tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:4px}
-.tabs button{flex:1;border:0;background:none;padding:8px;border-radius:7px;font-weight:600;color:var(--muted)}
+.tabs button{flex:1;border:0;background:none;padding:8px 4px;border-radius:7px;font-weight:600;color:var(--muted);font-size:15px}
 .tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg)}
-
-.coach{background:var(--accent);color:var(--accent-ink);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:6px}
-.coach h2{font-family:var(--f-display);font-weight:500;font-size:17px}
-.coach p{margin:0;font-size:14px;opacity:.92}
-.coach .meta{font-size:12px;letter-spacing:.06em;text-transform:uppercase;opacity:.8;font-weight:600}
-
-.list{display:flex;flex-direction:column;gap:10px}
-.ex{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
-.ex.complete{border-color:var(--done)}
-.ex-top{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}
-.ex-name{font-weight:700;font-size:16px;min-width:0;flex:1;border:0;background:none;padding:0}
-.ex-target{font-size:13px;color:var(--muted)}
-.ex-tip{font-size:13px;color:var(--muted);margin:0}
-.iconbtn{border:1px solid var(--line);background:none;border-radius:8px;width:32px;height:32px;display:grid;place-items:center;color:var(--muted);flex:none;font-size:16px;line-height:1}
-.sets{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.set{display:flex;align-items:center;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg)}
-.set.done{background:var(--done-soft);border-color:var(--done)}
-.set input{width:46px;border:0;background:none;text-align:center;padding:8px 2px;font-family:var(--f-num);font-weight:700;font-size:16px}
-.set button{border:0;background:none;padding:8px 10px;font-size:13px;color:var(--muted);border-left:1px solid var(--line)}
-.set.done button{color:var(--done);font-weight:700}
-.unit{font-size:12px;color:var(--muted)}
-.addset{border:1px dashed var(--line);background:none;border-radius:10px;padding:8px 12px;color:var(--muted);font-size:13px}
-.row2{display:grid;grid-template-columns:110px 1fr;gap:8px}
-.field{display:flex;flex-direction:column;gap:4px;min-width:0}
-.field label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
-.field input,.field textarea,.field select{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
-textarea{resize:vertical;min-height:70px}
-
-.add-ex{display:flex;gap:8px;flex-wrap:wrap}
-.add-ex input{flex:1 1 200px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 12px;min-width:0}
-.btn{border:1px solid var(--ink);background:none;border-radius:10px;padding:10px 14px;font-weight:600}
-.btn.primary{background:var(--ink);color:var(--bg);width:100%;padding:14px;font-size:16px}
-
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px}
-.panel h3{font-size:14px;font-weight:700}
-.scale{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
-.scale button{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 2px;display:flex;flex-direction:column;align-items:center;gap:2px}
-.scale button b{font-family:var(--f-num);font-size:16px}
-.scale button span{font-size:10px;color:var(--muted)}
-.scale button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.scale button[aria-pressed="true"] span{color:var(--accent-ink)}
-
-.status{font-size:13px;color:var(--muted);text-align:center;min-height:20px}
-.status.ok{color:var(--done)} .status.err{color:var(--warn)}
-.notice{font-size:13px;color:var(--warn);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
-.empty{background:var(--surface);border:1px dashed var(--line);border-radius:12px;padding:20px;color:var(--muted);text-align:center}
-
-.day{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px}
-.day-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
-.day-head b{font-weight:700}
-.pill{font-size:12px;border-radius:999px;padding:2px 10px;background:var(--accent-soft);color:var(--accent);font-weight:600}
-.day ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;font-size:14px}
-.day li{display:flex;justify-content:space-between;gap:10px}
-.day li span:last-child{color:var(--muted);text-align:right}
-.day .comment{font-size:13px;color:var(--muted);margin:0;border-top:1px solid var(--line);padding-top:8px}
-.week{display:flex;flex-direction:column;gap:6px}
-.week div{display:flex;gap:10px;font-size:14px}
-.week div b{width:28px;flex:none;color:var(--muted);font-weight:600}
-.week div.cur b,.week div.cur span{color:var(--accent);font-weight:700}
-.fig{display:flex;gap:12px;align-items:center;background:var(--bg);border-radius:10px;padding:8px 10px}
-.fig svg{width:160px;max-width:48%;height:auto;flex:none}
-.figside{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted);min-width:0}
-.figside a{color:var(--accent);font-weight:600;text-decoration:none}
-.figside a:hover{text-decoration:underline}
-.coachbox textarea{font-family:var(--f-num);font-size:12px;min-height:120px}
-.btnrow{display:flex;gap:8px;flex-wrap:wrap}.btnrow .btn{flex:1 1 140px}
-.btn.acc{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.seg{display:flex;gap:6px;flex-wrap:wrap}.seg button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 12px;font-size:13px}
-.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.list{display:flex;flex-direction:column;gap:12px}
+.page{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px}
 .hint{font-size:13px;color:var(--muted);margin:0}
-@media (prefers-reduced-motion:no-preference){.ex,.set{transition:border-color .15s,background .15s}}
+.btn{border:1px solid var(--ink);background:none;border-radius:10px;padding:9px 13px;font-weight:600}
+.btn.acc{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.small{padding:5px 10px;font-size:13px}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap}.btnrow .btn{flex:1 1 120px}
+.status{font-size:13px;color:var(--muted);text-align:center;min-height:20px}
+.status.ok{color:var(--accent)}
+
+/* nav */
+.nav{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.nav button.arrow{border:1px solid var(--line);background:var(--surface);border-radius:10px;width:40px;height:40px;font-size:18px;flex:none}
+.nav .ttl{text-align:center;min-width:0}
+.nav .ttl b{font-family:var(--f-hand);font-size:32px;line-height:1;display:block}
+.nav .ttl span{font-size:12px;color:var(--muted)}
+.today-link{border:0;background:none;color:var(--accent);font-weight:600;font-size:13px;padding:0}
+
+/* entry input */
+.add{display:flex;gap:6px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:6px}
+.add input{flex:1;min-width:0;border:0;background:none;padding:8px 4px;font-size:16px}
+.add input:focus{outline:none}
+.types{display:flex;gap:2px}
+.types button{width:36px;height:36px;border-radius:8px;border:0;background:none;font-size:18px;color:var(--muted);font-weight:700}
+.types button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+.add .go{border:0;background:var(--accent);color:var(--accent-ink);border-radius:8px;width:40px;height:36px;font-size:18px;flex:none}
+
+/* entries */
+.entries{display:flex;flex-direction:column}
+.e{display:grid;grid-template-columns:30px 1fr;align-items:start;gap:6px;padding:6px 0;border-bottom:1px dashed var(--line)}
+.e:last-child{border-bottom:0}
+.sig{width:30px;height:30px;border:0;background:none;font-size:19px;font-weight:700;line-height:1;display:grid;place-items:center;color:var(--ink);border-radius:8px;font-family:var(--f-num)}
+.sig:disabled{cursor:default}
+.e .txt{border:0;background:none;padding:4px 0;text-align:left;min-width:0;overflow-wrap:anywhere;font-size:16px}
+.e.pri .txt::before{content:"* ";color:var(--pri);font-weight:700}
+.e.done .txt{color:var(--done);text-decoration:line-through}
+.e.cancelled .txt{color:var(--done);text-decoration:line-through}
+.e.migrated .txt,.e.scheduled .txt{color:var(--done)}
+.e .meta{display:block;font-size:12px;color:var(--muted)}
+.e.event .txt{font-weight:600}
+.e.note .txt{color:var(--muted)}
+.empty{color:var(--muted);font-size:14px;padding:6px 0}
+
+/* migration */
+.mig{background:var(--accent-soft);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.mig .row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;font-size:15px}
+.mig .row small{color:var(--muted)}
+.mig .row .btnrow .btn{flex:none}
+
+/* week & month */
+.wday{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.wday.today{border-color:var(--accent)}
+.wday-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;border:0;background:none;width:100%;padding:0;text-align:left}
+.wday-h b{font-family:var(--f-hand);font-size:24px;line-height:1.1}
+.wday-h span{font-size:12px;color:var(--muted)}
+.wday ul{list-style:none;margin:4px 0 0;padding:0;display:flex;flex-direction:column;gap:2px;font-size:14px}
+.wday li{display:flex;gap:8px}
+.wday li i{font-style:normal;font-family:var(--f-num);width:16px;flex:none;text-align:center}
+.wday li.x{color:var(--done);text-decoration:line-through}
+.focus textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px;width:100%;min-height:76px;resize:vertical;font-size:15px}
+.focus h3,.page h3{font-family:var(--f-hand);font-size:24px;font-weight:700;line-height:1.1}
+.cal{display:flex;flex-direction:column}
+.crow{display:grid;grid-template-columns:30px 22px 1fr auto;gap:8px;align-items:baseline;padding:5px 0;border-bottom:1px dashed var(--line);border-left:0;border-right:0;border-top:0;background:none;width:100%;text-align:left}
+.crow .d{font-family:var(--f-num);font-weight:700;text-align:right}
+.crow .w{font-size:12px;color:var(--muted)}
+.crow .ev{font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.crow .c{font-family:var(--f-num);font-size:12px;color:var(--muted)}
+.crow.we .w,.crow.we .d{color:var(--pri)}
+.crow.today{background:var(--accent-soft);border-radius:6px}
+.legend{display:grid;grid-template-columns:repeat(2,1fr);gap:4px 12px;font-size:14px}
+.legend span b{font-family:var(--f-num);display:inline-block;width:20px}
+
+/* sheet */
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);width:100%;max-width:560px;max-height:90vh;overflow:auto;border-radius:16px 16px 0 0;
+  padding:18px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:12px}
+.sheet textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:10px;width:100%;min-height:70px;font-size:16px;resize:vertical}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.acts .btn{text-align:left}
+.acts .btn.del{border-color:var(--pri);color:var(--pri)}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 12px;font-size:14px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+textarea.mono{font-family:var(--f-num);font-size:12px;min-height:110px}
+/* week streak grid + automatic lines from other sections */
+.streaks{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.sg{display:grid;grid-template-columns:minmax(76px,auto) repeat(7,minmax(0,1fr)) 38px;gap:6px 4px;align-items:center}
+.sg-d{border:0;background:none;padding:2px 0;border-radius:8px;display:flex;flex-direction:column;align-items:center;line-height:1.15;color:var(--muted)}
+.sg-d span{font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+.sg-d b{font-family:var(--f-num);font-size:13px;color:var(--ink)}
+.sg-d.today b{color:var(--accent)}
+.sg-d.sel{background:var(--accent-soft)}
+.sg-s{font-size:10px;color:var(--muted);text-align:center;text-transform:uppercase;letter-spacing:.04em}
+.sg-l{font-size:13px;font-weight:700;color:var(--ink);text-decoration:none;white-space:nowrap}
+.sg i{display:block;height:22px;border-radius:6px;background:var(--bg);border:1px solid var(--line)}
+.sg i.full{background:var(--accent);border-color:var(--accent)}
+.sg i.part{background:var(--accent-soft);border-color:var(--accent)}
+.sg i.fut{border-style:dashed;background:none}
+.sg i.na{opacity:.4}
+.sg-n{font-family:var(--f-num);font-size:15px;text-align:center;color:var(--muted)}
+.sg-n.on{color:var(--accent)}
+.auto{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px;display:flex;flex-direction:column;gap:2px}
+.al{display:grid;grid-template-columns:24px 1fr;gap:6px;padding:6px 0;text-decoration:none;color:var(--ink);border-top:1px dashed var(--line)}
+.al:first-of-type{border-top:0}
+.as{font-family:var(--f-num);font-weight:700;color:var(--accent);text-align:center}
+.al b{font-weight:600;display:block}
+.al small{display:block;color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+
+/* shared bottom bar */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:15;background:var(--surface);border-top:1px solid var(--line);
+  padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
+.tabbar div{display:flex;max-width:560px;margin:0 auto}
+.tabbar a{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 2px;text-decoration:none;color:var(--muted);font-size:11px;font-weight:600;border-radius:8px;min-width:0}
+.tabbar a svg{width:23px;height:23px}
+.tabbar a[aria-current="page"]{color:var(--accent)}
+body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <div>
-      <div class="eyebrow" id="today-label">Сегодня</div>
-      <h1>Дневник тренировок</h1>
-      <span style="display:flex;gap:12px;flex-wrap:wrap"><a href="pitanie/" style="font-size:13px;font-weight:600;color:var(--accent);text-decoration:none">Меню на неделю →</a><a href="privychki/" style="font-size:13px;font-weight:600;color:var(--accent);text-decoration:none">Привычки →</a><a href="slova/" style="font-size:13px;font-weight:600;color:var(--accent);text-decoration:none">Слова →</a><a href="grammar/" style="font-size:13px;font-weight:600;color:var(--accent);text-decoration:none">Грамматика →</a><a href="dnevnik/" style="font-size:13px;font-weight:600;color:var(--accent);text-decoration:none">Дневник →</a></span>
-    </div>
-    <div class="streak"><b class="num" id="streak">0</b><span id="streak-word">дней подряд</span></div>
+    <div class="eyebrow" id="hello">Мой компаньон</div>
+    <h1>Дневник</h1>
   </header>
-
-  <div>
-    <div class="strip" id="strip" aria-label="Последние 14 дней"></div>
-    <div class="strip-legend"><span>2 недели назад</span><span>сегодня</span></div>
-  </div>
-
+  <section id="streaks" class="streaks" aria-label="Серии за неделю"></section>
   <div class="tabs" role="tablist">
-    <button role="tab" id="tab-today" aria-selected="true">Сегодня</button>
-    <button role="tab" id="tab-history" aria-selected="false">История</button>
+    <button role="tab" id="tab-day" aria-selected="true">День</button>
     <button role="tab" id="tab-week" aria-selected="false">Неделя</button>
-    <button role="tab" id="tab-coach" aria-selected="false">Тренер</button>
+    <button role="tab" id="tab-month" aria-selected="false">Месяц</button>
+    <button role="tab" id="tab-more" aria-selected="false">Ещё</button>
   </div>
-
-  <div id="notice" class="notice" hidden></div>
-
-  <section id="view-today" class="list"></section>
-  <section id="view-history" class="list" hidden></section>
+  <section id="view-day" class="list"></section>
   <section id="view-week" class="list" hidden></section>
-  <section id="view-coach" class="list coachbox" hidden></section>
+  <section id="view-month" class="list" hidden></section>
+  <section id="view-more" class="list" hidden></section>
 </div>
-
+<div id="sheet" class="sheet-bg" hidden></div>
+<nav class="tabbar" aria-label="Разделы"><div><a href="./" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/><path d="M9 8h6"/></svg><span>Дневник</span></a><a href="trening/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/></svg><span>Тренировка</span></a><a href="privychki/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg><span>Привычки</span></a><a href="slova/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="13" height="14" rx="2"/><path d="M8 5V3h11a2 2 0 0 1 2 2v12h-5"/><path d="m6.5 15 3-7 3 7M7.5 13h4"/></svg><span>Слова</span></a><a href="obmen/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10l5-5 5 5M12 5v10"/><path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/></svg><span>Claude</span></a></div></nav>
 <script>
 (function(){
   const $ = s => document.querySelector(s);
   const pad = n => String(n).padStart(2,'0');
   const ymd = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  const parse = s => { const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d||1); };
+  const addD = (s,n) => { const d=parse(s); d.setDate(d.getDate()+n); return ymd(d); };
+  const ym = d => d.getFullYear()+'-'+pad(d.getMonth()+1);
+  const addM = (m,n) => { const d=parse(m+'-01'); d.setMonth(d.getMonth()+n); return ym(d); };
   const TODAY = ymd(new Date());
-  const MONTHS = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+  const MON = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+  const MONN = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
   const WD = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
   const WDL = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
-  const nice = s => { const [y,m,d]=s.split('-').map(Number); const dt=new Date(y,m-1,d); return d+' '+MONTHS[m-1]+', '+WDL[dt.getDay()]; };
-  const plural = (n,a,b,c)=>{n=Math.abs(n)%100;const n1=n%10;if(n>10&&n<20)return c;if(n1>1&&n1<5)return b;if(n1==1)return a;return c;};
   const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const plural=(n,a,b,c)=>{n=Math.abs(n)%100;const n1=n%10;if(n>10&&n<20)return c;if(n1>1&&n1<5)return b;if(n1==1)return a;return c;};
+  const raw = k => { try{ return JSON.parse(localStorage.getItem(k)||'null'); }catch(e){ return null; } };
+  const LS = { get:k=>raw('bj-'+k), set(k,v){ try{ localStorage.setItem('bj-'+k, JSON.stringify(v)); }catch(e){} } };
 
-  $('#today-label').textContent = nice(TODAY);
+  /* entry: {id, type:'task'|'event'|'note', text, state:'open'|'done'|'migrated'|'scheduled'|'cancelled', pri, date?:'YYYY-MM-DD', month?:'YYYY-MM', to?:string, created} */
+  let entries = LS.get('entries');
+  if (!entries){ entries = [
+    {id:'x1', type:'task', text:'Пример задачи: нажми на точку слева, чтобы отметить', state:'open', pri:false, date:TODAY, created:Date.now()},
+    {id:'x2', type:'event', text:'Пример события: тренировка в 19:00', state:'open', pri:false, date:TODAY, created:Date.now()+1},
+    {id:'x3', type:'note', text:'Пример заметки. Нажми на текст, чтобы изменить, перенести или удалить', state:'open', pri:false, date:TODAY, created:Date.now()+2}
+  ]; LS.set('entries', entries); }
+  let notes = LS.get('notes') || {};   // {'W:2026-11-02': text, 'M:2026-11': text}
+  const save = () => LS.set('entries', entries);
+  const uid = () => 'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  let day = TODAY, weekOf = TODAY, month = ym(new Date()), addType = 'task';
 
-  let db = null, plan = null, logs = {}, draft = null, dirty = false, saving = false;
-  const FEEL = [['1','очень легко'],['2','легко'],['3','норм'],['4','тяжело'],['5','на пределе']];
+  const SIG = {task:{open:'•',done:'×',migrated:'>',scheduled:'<',cancelled:'•'}, event:{open:'○',done:'○',cancelled:'○'}, note:{open:'–',cancelled:'–'}};
+  const sig = e => (SIG[e.type]||{})[e.state] || (e.type==='event'?'○':e.type==='note'?'–':'•');
+  const forDay = d => entries.filter(e=>e.date===d).sort((a,b)=>a.created-b.created);
+  const forMonth = m => entries.filter(e=>e.month===m && !e.date).sort((a,b)=>a.created-b.created);
+  function dayTitle(s){ const d=parse(s); return d.getDate()+' '+MON[d.getMonth()]; }
+  function relName(s){ return s===TODAY?'Сегодня':s===addD(TODAY,1)?'Завтра':s===addD(TODAY,-1)?'Вчера':WDL[parse(s).getDay()]; }
 
-  /* ---------- local fallback ---------- */
-  const LS = {
-    get(k){try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}},
-    set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
-  };
-
-  /* ---------- draft ---------- */
-  function draftFrom(src, fromLog){
-    const exs = (src && src.exercises) || [];
-    return {
-      exercises: exs.map(e => ({
-        name: e.name||'Упражнение', fig: e.fig||'',
-        unit: e.unit||'повт',
-        target: e.target || (e.sets && !Array.isArray(e.sets) ? e.sets : ''),
-        tip: e.tip||'',
-        weight: e.weight||'',
-        note: fromLog ? (e.note||'') : '',
-        sets: fromLog && Array.isArray(e.sets)
-          ? e.sets.map(s=>({v:s.v, done:!!s.done}))
-          : Array.from({length: Number(e.setCount)||3}, ()=>({v: Number(e.reps)||10, done:false}))
-      })),
-      feeling: fromLog ? (src.feeling||'') : '',
-      comment: fromLog ? (src.comment||'') : ''
-    };
+  function entryHTML(e){
+    const canTick = e.type==='task' && (e.state==='open'||e.state==='done');
+    const meta = e.state==='migrated' ? 'перенесено на '+(e.to||'') : e.state==='scheduled' ? 'запланировано: '+(e.to||'') : '';
+    return `<div class="e ${e.type} ${e.state}${e.pri?' pri':''}"><button class="sig" data-tick="${e.id}" ${canTick?'':'disabled'} aria-label="${canTick?(e.state==='done'?'Снять отметку':'Отметить выполненной'):'Тип записи'}">${sig(e)}</button>
+      <button class="txt" data-edit="${e.id}">${esc(e.text)}${meta?`<span class="meta">${esc(meta)}</span>`:''}</button></div>`;
   }
-  function ensureDraft(){
-    if (draft) return;
-    const local = LS.get('draft-'+TODAY);
-    if (logs[TODAY]) draft = draftFrom(logs[TODAY], true);
-    else if (local) draft = local;
-    else { const P = getActive(); if (P) draft = draftFrom(P, false); }
+  function addBox(scope){
+    return `<div class="add"><div class="types" role="group" aria-label="Тип записи">
+        <button data-type="task" aria-pressed="${addType==='task'}" aria-label="Задача">•</button>
+        <button data-type="event" aria-pressed="${addType==='event'}" aria-label="Событие">○</button>
+        <button data-type="note" aria-pressed="${addType==='note'}" aria-label="Заметка">–</button></div>
+      <input id="add-${scope}" placeholder="${addType==='task'?'Новая задача':addType==='event'?'Новое событие':'Новая заметка'}" aria-label="Новая запись" enterkeyhint="done">
+      <button class="go" data-add="${scope}" aria-label="Добавить">+</button></div>`;
   }
-  function touch(){ dirty = true; LS.set('draft-'+TODAY, draft); setStatus('Есть несохранённые изменения',''); }
-
-  /* ---------- render: today ---------- */
-  let statusMsg = ['',''];
-  function setStatus(t,c){ statusMsg=[t,c]; const el=$('#status'); if(el){el.textContent=t; el.className='status '+c;} }
-
-  function renderToday(){
-    const plan = getActive();
-    const v = $('#view-today');
-    ensureDraft();
-    let h = '';
-    if (plan){
-      h += `<div class="coach"><div class="meta">${esc(plan.dayLabel||'План на сегодня')}${plan.duration?' · '+esc(plan.duration):''}</div>
-        <h2>${esc(plan.title||'Тренировка')}</h2>${plan.note?`<p>${esc(plan.note)}</p>`:''}
-        ${plan.date && plan.date!==TODAY?`<p><b>План от ${esc(nice(plan.date))}.</b> Напиши тренеру в чат за новым.</p>`:''}</div>`;
-    }
-    if (!draft){
-      h += `<div class="empty">План на сегодня появится здесь, как только тренер его пришлёт. А пока можно добавить упражнение самому ↓</div>`;
-      draft = {exercises:[],feeling:'',comment:''};
-    }
-    draft.exercises.forEach((e,i)=>{
-      const allDone = e.sets.length && e.sets.every(s=>s.done);
-      h += `<article class="ex${allDone?' complete':''}" data-i="${i}">
-        <div class="ex-top">
-          <div style="min-width:0;flex:1">
-            <input class="ex-name" id="name-${i}" value="${esc(e.name)}" aria-label="Название упражнения" data-k="name">
-            ${e.target?`<div class="ex-target">План: <span class="num">${esc(e.target)}</span></div>`:''}
-          </div>
-          <button class="iconbtn" data-act="del" title="Убрать упражнение" aria-label="Убрать упражнение">×</button>
-        </div>
-        ${e.tip?`<p class="ex-tip">${esc(e.tip)}</p>`:''}
-        ${figHTML(e)}
-        <div class="sets">
-          ${e.sets.map((s,j)=>`<div class="set${s.done?' done':''}">
-            <input id="s-${i}-${j}" class="num" inputmode="numeric" value="${esc(s.v)}" data-set="${j}" aria-label="Подход ${j+1}, ${esc(e.unit)}">
-            <button data-act="toggle" data-set="${j}" aria-label="Отметить подход ${j+1}">${s.done?'✓':j+1}</button></div>`).join('')}
-          <button class="addset" data-act="addset">+ подход</button>
-          ${e.sets.length?`<button class="addset" data-act="rmset">− подход</button>`:''}
-          <span class="unit">${esc(e.unit)}</span>
-        </div>
-        <div class="row2">
-          <div class="field"><label for="w-${i}">Вес / резинка</label><input id="w-${i}" data-k="weight" value="${esc(e.weight)}" placeholder="напр. 4 кг"></div>
-          <div class="field"><label for="n-${i}">Заметка</label><input id="n-${i}" data-k="note" value="${esc(e.note)}" placeholder="как зашло, что заменил"></div>
-        </div>
-      </article>`;
-    });
-    h += `<div class="add-ex">
-        <input id="new-ex" placeholder="Добавить своё упражнение">
-        <button class="btn" data-act="addex">Добавить</button></div>
-      <div class="panel">
-        <h3>Как ощущалось?</h3>
-        <div class="scale">${FEEL.map(([n,t])=>`<button data-act="feel" data-v="${n}" aria-pressed="${draft.feeling===n}"><b>${n}</b><span>${t}</span></button>`).join('')}</div>
-        <div class="field"><label for="comment">Комментарий тренеру</label>
-          <textarea id="comment" placeholder="Что было тяжело, что болело, что хочешь поменять">${esc(draft.comment)}</textarea></div>
-      </div>
-      <button class="btn primary" data-act="save">${logs[TODAY]?'Обновить запись':'Сохранить тренировку'}</button>
-      <div id="status" class="status ${statusMsg[1]}">${esc(statusMsg[0])}</div>`;
-    v.innerHTML = h;
-    setupFigs();
+  function addEntry(scope){
+    const inp = $('#add-'+scope), text = inp.value.trim(); if (!text){ inp.focus(); return; }
+    const e = {id:uid(), type:addType, text, state:'open', pri:false, created:Date.now()};
+    if (scope==='day') e.date = day; else { e.month = month; }
+    entries.push(e); save(); render(); const n=$('#add-'+scope); if(n) n.focus();
   }
 
-  /* ---------- exercise figures ---------- */
-  const FIGS = {
-    squat:{cue:'Таз назад и вниз, пятки на полу, грудь раскрыта',db:true,
-      a:{head:[101,13],sh:[100,26],el:[108,40],ha:[103,32],hi:[100,60],kn:[101,86],an:[100,112]},
-      b:{head:[99,43],sh:[96,56],el:[110,68],ha:[105,60],hi:[82,90],kn:[120,94],an:[100,112]}},
-    pushup:{cue:'Опускай грудь к полу, локти примерно под 45° к телу',
-      a:{head:[153,66],sh:[140,72],el:[141,92],ha:[141,112],hi:[88,98],kn:[62,112],an:[44,100]},
-      b:{head:[154,95],sh:[140,98],el:[124,100],ha:[141,112],hi:[90,106],kn:[62,112],an:[44,100]}},
-    row:{cue:'Тяни локоть к поясу, спина ровная, вторая рука на стуле',db:true,chair:true,
-      a:{head:[134,49],sh:[120,54],el:[121,74],ha:[121,92],el2:[136,66],ha2:[150,78],hi:[72,62],kn:[76,88],an:[70,112]},
-      b:{head:[134,49],sh:[120,54],el:[104,54],ha:[106,72],el2:[136,66],ha2:[150,78],hi:[72,62],kn:[76,88],an:[70,112]}},
-    bridge:{cue:'Упирайся пятками и поднимай таз до прямой линии',
-      a:{head:[22,102],sh:[38,108],el:[62,111],ha:[84,111],hi:[92,108],kn:[124,84],an:[140,112]},
-      b:{head:[22,102],sh:[38,108],el:[62,111],ha:[84,111],hi:[98,82],kn:[128,80],an:[140,112]}},
-    plank:{cue:'Держи прямую линию от плеч до пяток и дыши ровно',slow:true,
-      a:{head:[153,79],sh:[140,84],el:[140,112],ha:[160,112],hi:[94,92],kn:[62,101],an:[30,110]},
-      b:{head:[153,78],sh:[140,83],el:[140,112],ha:[160,112],hi:[94,89],kn:[62,100],an:[30,110]}},
-    lunge:{cue:'Опускайся вертикально, переднее колено над стопой, заднее почти касается пола',db:true,
-      a:{head:[104,15],sh:[104,28],el:[105,44],ha:[105,60],hi:[104,60],kn:[116,85],an:[126,112],kn2:[88,84],an2:[70,108]},
-      b:{head:[96,35],sh:[96,48],el:[97,64],ha:[97,80],hi:[96,80],kn:[124,82],an:[126,112],kn2:[92,106],an2:[70,108]}},
-    rdl:{cue:'Уводи таз назад, спина прямая, гантели скользят вдоль ног',db:true,
-      a:{head:[100,13],sh:[100,26],el:[101,43],ha:[101,58],hi:[100,60],kn:[102,86],an:[100,112]},
-      b:{head:[128,42],sh:[116,46],el:[116,62],ha:[116,80],hi:[84,58],kn:[96,86],an:[100,112]}},
-    deadbug:{cue:'Поясница прижата к полу, рука и противоположная нога уходят медленно',
-      a:{head:[30,100],sh:[44,104],el:[46,88],ha:[48,72],el2:[46,88],ha2:[48,72],hi:[84,104],kn:[86,80],an:[106,80],kn2:[86,80],an2:[106,80]},
-      b:{head:[30,100],sh:[44,104],el:[28,102],ha:[12,100],el2:[46,88],ha2:[48,72],hi:[84,104],kn:[112,100],an:[138,102],kn2:[86,80],an2:[106,80]}},
-    sideplank:{cue:'Локоть под плечом, таз держи высоко, тело одной линией',slow:true,
-      a:{head:[152,70],sh:[140,80],el:[142,108],ha:[160,108],el2:[142,62],ha2:[144,46],hi:[92,90],kn:[62,100],an:[30,110]},
-      b:{head:[152,71],sh:[140,81],el:[142,108],ha:[160,108],el2:[142,63],ha2:[144,47],hi:[92,96],kn:[62,103],an:[30,110]}},
-    birddog:{cue:'Вытяни руку и противоположную ногу в линию, спина не прогибается',
-      a:{head:[144,72],sh:[130,78],el:[130,94],ha:[130,110],el2:[131,95],ha2:[131,110],hi:[80,78],kn:[80,110],an:[56,110],kn2:[81,110],an2:[57,110]},
-      b:{head:[144,72],sh:[130,78],el:[130,94],ha:[130,110],el2:[150,74],ha2:[170,72],hi:[80,78],kn:[80,110],an:[56,110],kn2:[54,76],an2:[28,74]}},
-    run:{cue:'Спокойный темп: можешь говорить фразами. Пульс выше 150 — переходи на шаг',
-      a:{head:[104,14],sh:[102,27],el:[110,40],ha:[119,33],el2:[94,40],ha2:[87,50],hi:[98,60],kn:[113,80],an:[108,106],kn2:[90,84],an2:[74,92]},
-      b:{head:[104,14],sh:[102,27],el:[94,40],ha:[87,50],el2:[110,40],ha2:[119,33],hi:[98,60],kn:[90,84],an:[74,92],kn2:[113,80],an2:[108,106]}},
-    march:{cue:'Колено до уровня пояса, руки работают в такт, дыши ровно',
-      a:{head:[100,13],sh:[100,26],el:[96,42],ha:[100,56],el2:[104,42],ha2:[100,56],hi:[100,60],kn:[101,86],an:[100,112],kn2:[100,86],an2:[100,112]},
-      b:{head:[100,13],sh:[100,26],el:[90,40],ha:[94,54],el2:[110,40],ha2:[118,30],hi:[100,60],kn:[124,60],an:[120,86],kn2:[100,86],an2:[100,112]}}
-  };
-  function guessFig(n){ n=(n||'').toLowerCase();
-    if(/румынск|становая/.test(n))return 'rdl'; if(/выпад/.test(n))return 'lunge';
-    if(/жук/.test(n))return 'deadbug'; if(/боков.*планк/.test(n))return 'sideplank';
-    if(/птица|собак|bird/.test(n))return 'birddog'; if(/марш|колен.*вверх|на месте/.test(n))return 'march';
-    if(/бег|пробеж/.test(n))return 'run';
-    if(/присед/.test(n))return 'squat'; if(/отжим/.test(n))return 'pushup';
-    if(/тяга/.test(n))return 'row'; if(/мост/.test(n))return 'bridge'; if(/планк/.test(n))return 'plank'; return ''; }
-  function figHTML(e){
-    const k = (e.fig && FIGS[e.fig]) ? e.fig : guessFig(e.name);
-    const q = encodeURIComponent(e.name+' техника выполнения');
-    const link = `<a href="https://www.youtube.com/results?search_query=${q}" target="_blank" rel="noopener">Видео техники ↗</a>`;
-    if (!FIGS[k]) return `<div class="fig"><div class="figside">${link}</div></div>`;
-    return `<div class="fig"><svg viewBox="0 0 200 120" data-fig="${k}" role="img" aria-label="Схема движения: ${esc(e.name)}"></svg>
-      <div class="figside"><span>${FIGS[k].cue}</span>${link}</div></div>`;
+  /* ---------- streaks and what was done in the other sections ---------- */
+  let X = {};
+  function snap(){ X = {logs: raw('logs')||{}, habits: (raw('hab-habits')||[]).filter(h=>h.auto!=='menu'), marks: raw('hab-marks')||{}, sess: raw('hab-sessions')||[], wlog: raw('slv-log')||{}}; }
+  const wkDone = d => { const l = X.logs[d]; return !!(l && (l.exercises||[]).some(e=>(e.sets||[]).some(s=>s.done))); };
+  const habVal = (h,d) => h.auto==='workout' ? (wkDone(d)?1:0) : ((X.marks[d]||{})[h.id]||0);
+  const habOk = (h,d) => habVal(h,d) >= (h.kind==='count' ? (h.target||1) : 1);
+  function habFrac(d){ return X.habits.length ? X.habits.filter(h=>habOk(h,d)).length / X.habits.length : null; }
+  const wordsDone = d => { const L = X.wlog[d]; return !!(L && L.reviews); };
+  function streakOf(fn){ let d = fn(TODAY) ? TODAY : addD(TODAY,-1), n = 0; while (n<3650 && fn(d)){ n++; d = addD(d,-1); } return n; }
+  function renderStreaks(){
+    snap();
+    const m = monday(TODAY), days = Array.from({length:7},(_,i)=>addD(m,i));
+    const rows = [
+      {label:'Тренировка', href:'trening/', cell:d=>wkDone(d)?1:0, ok:wkDone},
+      {label:'Привычки', href:'privychki/', cell:habFrac, ok:d=>habFrac(d)===1},
+      {label:'Слова', href:'slova/', cell:d=>wordsDone(d)?1:0, ok:wordsDone}
+    ];
+    let h = `<div class="sg"><span></span>${days.map(d=>{ const dd=parse(d); return `<button class="sg-d${d===TODAY?' today':''}${d===day?' sel':''}" data-open-day="${d}" aria-label="Открыть ${dayTitle(d)}"><span>${WD[dd.getDay()]}</span><b>${dd.getDate()}</b></button>`; }).join('')}<span class="sg-s">серия</span>`;
+    rows.forEach(r=>{ const n = streakOf(r.ok);
+      h += `<a class="sg-l" href="${r.href}">${r.label}</a>` + days.map(d=>{ if (d>TODAY) return '<i class="fut"></i>'; const v = r.cell(d);
+        return `<i class="${v===null?'na':v>=1?'full':v>0?'part':''}" title="${dayTitle(d)}"></i>`; }).join('') + `<b class="sg-n${n?' on':''}" title="Дней подряд">${n}</b>`; });
+    $('#streaks').innerHTML = h + `</div>`;
   }
-  const NS='http://www.w3.org/2000/svg';
-  const mk=(t,a,p)=>{const el=document.createElementNS(NS,t);for(const k in a)el.setAttribute(k,a[k]);p.appendChild(el);return el;};
-  let figs=[];
-  function setupFigs(){
-    figs=[];
-    document.querySelectorAll('svg[data-fig]').forEach(svg=>{
-      const F=FIGS[svg.dataset.fig];
-      mk('line',{x1:6,y1:113,x2:194,y2:113,stroke:'var(--line)','stroke-width':2},svg);
-      if(F.chair){ const c={stroke:'var(--muted)','stroke-width':3,fill:'none','stroke-linecap':'round'};
-        mk('line',{...c,x1:146,y1:80,x2:182,y2:80},svg); mk('line',{...c,x1:148,y1:80,x2:148,y2:112},svg);
-        mk('line',{...c,x1:180,y1:80,x2:180,y2:112},svg); mk('line',{...c,x1:182,y1:80,x2:182,y2:46},svg); }
-      const bones=[['sh','hi'],['hi','kn'],['kn','an'],['sh','el'],['el','ha']];
-      if(F.a.el2) bones.push(['sh','el2'],['el2','ha2']);
-      if(F.a.kn2) bones.push(['hi','kn2'],['kn2','an2']);
-      bones.push(['sh','head']);
-      bones.sort((x,y)=>(/2/.test(y[1])?1:0)-(/2/.test(x[1])?1:0));
-      const lines=bones.map(b=>mk('line',{stroke:/2/.test(b[1])?'var(--muted)':'var(--ink)','stroke-width':5,'stroke-linecap':'round'},svg));
-      const head=mk('circle',{r:8,fill:'var(--ink)'},svg);
-      const db=F.db?mk('rect',{width:14,height:7,rx:2,fill:'var(--accent)'},svg):null;
-      figs.push({F,bones,lines,head,db});
-    });
-    drawFigs(performance.now());
-  }
-  const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  function drawFigs(ts){
-    figs.forEach(({F,bones,lines,head,db})=>{
-      const per = F.slow?4000:2400;
-      const p = reduce ? 1 : (1-Math.cos(ts/per*2*Math.PI))/2;
-      const P = k=>[F.a[k][0]+(F.b[k][0]-F.a[k][0])*p, F.a[k][1]+(F.b[k][1]-F.a[k][1])*p];
-      bones.forEach(([u,w],i)=>{const A=P(u),B=P(w);
-        lines[i].setAttribute('x1',A[0]);lines[i].setAttribute('y1',A[1]);
-        lines[i].setAttribute('x2',B[0]);lines[i].setAttribute('y2',B[1]);});
-      const H=P('head'); head.setAttribute('cx',H[0]); head.setAttribute('cy',H[1]);
-      if(db){const h=P('ha'); db.setAttribute('x',h[0]-7); db.setAttribute('y',h[1]-3.5);}
-    });
-  }
-  (function loop(ts){ if(figs.length && !reduce) drawFigs(ts); requestAnimationFrame(loop); })(0);
-
-  $('#view-today').addEventListener('input', ev=>{
-    const t = ev.target, card = t.closest('.ex');
-    if (t.id==='comment'){ draft.comment = t.value; return touch(); }
-    if (!card) return;
-    const e = draft.exercises[+card.dataset.i];
-    if (t.dataset.set!==undefined){ const n = parseInt(t.value,10); e.sets[+t.dataset.set].v = isNaN(n)?'':n; }
-    else if (t.dataset.k) e[t.dataset.k] = t.value;
-    touch();
-  });
-  $('#view-today').addEventListener('click', ev=>{
-    const b = ev.target.closest('[data-act]'); if(!b) return;
-    const act = b.dataset.act, card = b.closest('.ex'), e = card && draft.exercises[+card.dataset.i];
-    if (act==='toggle'){ const s=e.sets[+b.dataset.set]; s.done=!s.done; }
-    else if (act==='addset'){ const last=e.sets[e.sets.length-1]; e.sets.push({v: last?last.v:10, done:false}); }
-    else if (act==='rmset'){ e.sets.pop(); }
-    else if (act==='del'){ draft.exercises.splice(+card.dataset.i,1); }
-    else if (act==='addex'){ const inp=$('#new-ex'); const name=inp.value.trim(); if(!name) return inp.focus();
-      draft.exercises.push({name,unit:'повт',target:'',tip:'',weight:'',note:'',sets:[{v:10,done:false}]}); }
-    else if (act==='feel'){ draft.feeling = draft.feeling===b.dataset.v?'':b.dataset.v; }
-    else if (act==='save'){ return save(); }
-    touch(); renderToday();
-  });
-
-  async function save(){
-    if (saving) return;
-    const body = {
-      date: TODAY,
-      planTitle: (getActive()||{}).title||'', type: (getActive()||{}).type||'',
-      exercises: draft.exercises.map(e=>({name:e.name,fig:e.fig||'',unit:e.unit,target:e.target,weight:e.weight,note:e.note,
-        sets:e.sets.map(s=>({v:s.v===''?0:Number(s.v),done:!!s.done}))})),
-      feeling: draft.feeling, comment: draft.comment,
-      savedAt: new Date().toISOString()
-    };
-    saving = true; setStatus('Сохраняю…','');
-    try{
-      if (db) await db.doc('log/'+TODAY).set(body);
-      else { const all = LS.get('logs')||{}; all[TODAY]=body; LS.set('logs',all); logs=all; }
-      logs[TODAY] = body; dirty=false; LS.set('draft-'+TODAY,null);
-      setStatus('Сохранено. Во вкладке «Тренер» отправь лог, и я подстрою план.','ok');
-      renderAll();
-    }catch(err){
-      setStatus(err && err.code==='quota_exceeded' ? 'Хранилище заполнено, запись не сохранилась.' : 'Не получилось сохранить. Проверь связь и нажми ещё раз.','err');
-    } finally { saving=false; }
+  function autoBlock(d){
+    snap(); const lines = [];
+    const l = X.logs[d];
+    if (l){ const sets = (l.exercises||[]).flatMap(e=>e.sets||[]), dn = sets.filter(s=>s.done).length;
+      lines.push([dn?'✓':'·', 'Тренировка'+(l.planTitle?': '+l.planTitle:''), 'подходов '+dn+' из '+sets.length+(l.feeling?' · ощущения '+l.feeling+'/5':''), 'trening/']); }
+    if (X.habits.length){ const ok = X.habits.filter(h=>habOk(h,d));
+      if (ok.length || d===TODAY) lines.push([ok.length===X.habits.length?'✓':'◐', 'Привычки '+ok.length+' из '+X.habits.length, ok.map(h=>h.name).join(', ')||'пока ничего не отмечено', 'privychki/']); }
+    X.sess.filter(s=>s.date===d).forEach(s=>lines.push(['◷', s.name+' · '+Math.max(1,Math.round(s.secs/60))+' мин', s.note||'', 'privychki/']));
+    const L = X.wlog[d]; if (L && L.reviews) lines.push(['✓', 'Слова: '+L.reviews+' '+plural(L.reviews,'карточка','карточки','карточек'), (L.new?'новых '+L.new+' · ':'')+Math.max(1,Math.round((L.secs||0)/60))+' мин', 'slova/']);
+    if (!lines.length) return d===TODAY ? `<div class="auto"><p class="hint">Здесь появится всё, что ты сделаешь сегодня в тренировке, привычках и словах.</p></div>` : '';
+    return `<div class="auto"><div class="eyebrow">Сделано в приложении</div>${lines.map(([sg,t,sub,href])=>`<a class="al" href="${href}"><span class="as">${sg}</span><span><b>${esc(t)}</b>${sub?`<small>${esc(sub)}</small>`:''}</span></a>`).join('')}</div>`;
   }
 
-  /* ---------- history ---------- */
-  function renderHistory(){
-    const days = Object.values(logs).sort((a,b)=>b.date.localeCompare(a.date));
-    const v = $('#view-history');
-    if (!days.length){ v.innerHTML = `<div class="empty">Здесь будут твои тренировки. Отметь подходы во вкладке «Сегодня» и нажми «Сохранить».</div>`; return; }
-    v.innerHTML = days.map(d=>{
-      const done = d.exercises.reduce((a,e)=>a+e.sets.filter(s=>s.done).length,0);
-      const total = d.exercises.reduce((a,e)=>a+e.sets.length,0);
-      return `<div class="day"><div class="day-head"><b>${esc(nice(d.date))}</b>
-        <span class="pill num">${done}/${total} подх.${d.feeling?' · ощущ. '+esc(d.feeling):''}</span></div>
-        ${d.planTitle?`<div class="ex-target">${esc(d.planTitle)}</div>`:''}
-        <ul>${d.exercises.map(e=>`<li><span>${esc(e.name)}${e.weight?' · '+esc(e.weight):''}</span>
-          <span class="num">${e.sets.map(s=>s.v).join(' · ')} ${esc(e.unit)}</span></li>`).join('')}</ul>
-        ${d.comment?`<p class="comment">${esc(d.comment)}</p>`:''}</div>`;
-    }).join('');
+  /* ---------- day ---------- */
+  function renderDay(){
+    const list = forDay(day), d = parse(day);
+    const open = day===TODAY ? entries.filter(e=>e.type==='task' && e.state==='open' && e.date && e.date<TODAY) : [];
+    const monthTasks = day===TODAY ? forMonth(ym(d)).filter(e=>e.type==='task'&&e.state==='open') : [];
+    let h = `<div class="nav"><button class="arrow" data-day="-1" aria-label="Предыдущий день">‹</button>
+      <div class="ttl"><b>${dayTitle(day)}</b><span>${relName(day)}${day!==TODAY?` · <button class="today-link" data-day="0">к сегодня</button>`:''}</span></div>
+      <button class="arrow" data-day="1" aria-label="Следующий день">›</button></div>`;
+    h += autoBlock(day);
+    if (open.length) h += `<div class="mig"><b>Незакрытые задачи с прошлых дней: ${open.length}</b>
+      ${open.slice(0,8).map(e=>`<div class="row"><span>${esc(e.text)}<br><small>${dayTitle(e.date)}</small></span><div class="btnrow"><button class="btn small" data-mig="${e.id}">Сюда</button><button class="btn small" data-x="${e.id}" aria-label="Отменить задачу">✕</button></div></div>`).join('')}
+      ${open.length>1?`<button class="btn small" data-migall="1">Перенести все на сегодня</button>`:''}</div>`;
+    h += `<div class="page">${list.length?`<div class="entries">${list.map(entryHTML).join('')}</div>`:'<div class="empty">Записей нет. Добавь первую ниже.</div>'}</div>` + addBox('day');
+    if (monthTasks.length) h += `<div class="page"><h3>Задачи на ${MONN[d.getMonth()].toLowerCase()}</h3><div class="entries">${monthTasks.map(entryHTML).join('')}</div><p class="hint">Нажми на задачу, чтобы взять её на сегодня.</p></div>`;
+    $('#view-day').innerHTML = h;
   }
 
   /* ---------- week ---------- */
+  function monday(s){ const d=parse(s); const k=(d.getDay()+6)%7; d.setDate(d.getDate()-k); return ymd(d); }
   function renderWeek(){
-    const v = $('#view-week');
-    const w = plan && plan.week;
-    if (!w || !w.length){ v.innerHTML = `<div class="empty">Тренер ещё не расписал неделю.</div>`; return; }
-    const wd = WD[new Date().getDay()];
-    v.innerHTML = `<div class="panel"><h3>План на неделю</h3><div class="week">${
-      w.map(x=>`<div class="${x.day===wd?'cur':''}"><b>${esc(x.day)}</b><span>${esc(x.focus)}</span></div>`).join('')}</div></div>
-      ${plan.rules?`<div class="panel"><h3>Правила</h3><p class="ex-tip" style="white-space:pre-line">${esc(plan.rules)}</p></div>`:''}`;
+    const m = monday(weekOf), days = Array.from({length:7},(_,i)=>addD(m,i)), last = days[6];
+    const all = days.flatMap(forDay), tasks = all.filter(e=>e.type==='task'&&e.state!=='cancelled');
+    const done = tasks.filter(e=>e.state==='done').length;
+    let h = `<div class="nav"><button class="arrow" data-week="-1" aria-label="Предыдущая неделя">‹</button>
+      <div class="ttl"><b>${parse(m).getDate()}–${parse(last).getDate()} ${MON[parse(last).getMonth()]}</b><span>${monday(TODAY)===m?'эта неделя':'неделя'} · задач выполнено ${done}/${tasks.length}${monday(TODAY)!==m?` · <button class="today-link" data-week="0">к этой</button>`:''}</span></div>
+      <button class="arrow" data-week="1" aria-label="Следующая неделя">›</button></div>
+      <div class="page focus"><h3>Фокус недели</h3><textarea id="note-W" placeholder="Главное на эту неделю: 1–3 пункта">${esc(notes['W:'+m]||'')}</textarea></div>`;
+    days.forEach(dd=>{ const l = forDay(dd), d = parse(dd);
+      h += `<div class="wday${dd===TODAY?' today':''}"><button class="wday-h" data-open-day="${dd}"><b>${WD[d.getDay()]}, ${d.getDate()}</b><span>${l.length?l.length+' '+plural(l.length,'запись','записи','записей'):'пусто'} →</span></button>
+        ${l.length?`<ul>${l.slice(0,6).map(e=>`<li class="${e.state==='done'||e.state==='cancelled'?'x':''}"><i>${sig(e)}</i><span>${esc(e.text)}</span></li>`).join('')}${l.length>6?`<li><i></i><span class="hint">и ещё ${l.length-6}</span></li>`:''}</ul>`:''}</div>`; });
+    $('#view-week').innerHTML = h;
   }
 
-  /* ---------- streak + strip ---------- */
-  function renderTop(){
-    const has = d => logs[d] && logs[d].exercises && logs[d].exercises.some(e=>e.sets.some(s=>s.done));
-    let streak=0; const c=new Date();
-    if (!has(ymd(c))) c.setDate(c.getDate()-1);
-    while (has(ymd(c))){ streak++; c.setDate(c.getDate()-1); }
-    $('#streak').textContent = streak;
-    $('#streak-word').textContent = plural(streak,'день','дня','дней')+' подряд';
-    const strip = $('#strip'); let h='';
-    for (let i=13;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); const k=ymd(d);
-      h += `<i class="${has(k)?'on':''}${k===TODAY?' today':''}" title="${nice(k)}"></i>`; }
-    strip.innerHTML = h;
+  /* ---------- month ---------- */
+  function renderMonth(){
+    const d0 = parse(month+'-01'), n = new Date(d0.getFullYear(), d0.getMonth()+1, 0).getDate();
+    let h = `<div class="nav"><button class="arrow" data-month="-1" aria-label="Предыдущий месяц">‹</button>
+      <div class="ttl"><b>${MONN[d0.getMonth()]}</b><span>${d0.getFullYear()}${month!==ym(new Date())?` · <button class="today-link" data-month="0">к текущему</button>`:''}</span></div>
+      <button class="arrow" data-month="1" aria-label="Следующий месяц">›</button></div>
+      <div class="page focus"><h3>Цели месяца</h3><textarea id="note-M" placeholder="Что важно в этом месяце">${esc(notes['M:'+month]||'')}</textarea></div>
+      <div class="page"><h3>Календарь</h3><div class="cal">`;
+    for (let i=1;i<=n;i++){ const ds = month+'-'+pad(i), dd = parse(ds), l = forDay(ds);
+      const ev = l.filter(e=>e.type==='event').map(e=>e.text).join(' · ');
+      const t = l.filter(e=>e.type==='task'&&e.state!=='cancelled'&&e.state!=='migrated'), td = t.filter(e=>e.state==='done').length;
+      h += `<button class="crow${dd.getDay()%6===0?' we':''}${ds===TODAY?' today':''}" data-open-day="${ds}"><span class="d">${i}</span><span class="w">${WD[dd.getDay()]}</span><span class="ev">${esc(ev)}</span><span class="c">${t.length?td+'/'+t.length:''}</span></button>`; }
+    const mt = forMonth(month);
+    h += `</div><p class="hint">Справа: выполнено задач за день. Нажми на день, чтобы открыть его.</p></div>
+      <div class="page"><h3>Задачи месяца</h3>${mt.length?`<div class="entries">${mt.map(entryHTML).join('')}</div>`:'<div class="empty">Сюда пиши то, что нужно сделать в этом месяце, без точного дня.</div>'}</div>` + addBox('month');
+    $('#view-month').innerHTML = h;
   }
 
-  function renderAll(){
-    if (!dirty || !document.querySelector('#view-today .ex')) renderToday();
-    renderHistory(); renderWeek(); renderTop(); renderCoach();
-  }
-
-  /* ---------- tabs ---------- */
-  const tabs = ['today','history','week','coach'];
-  tabs.forEach(t=>$('#tab-'+t).addEventListener('click',()=>{
-    tabs.forEach(o=>{ $('#tab-'+o).setAttribute('aria-selected', o===t); $('#view-'+o).hidden = o!==t; });
-    if (t==='today') renderToday();
-  }));
-
-  /* ---------- coach: export / import ---------- */
-  const DEFAULT_PLAN = {"date": "2026-11-05", "dayLabel": "День 3 · четверг", "duration": "≈15 мин", "exercises": [{"fig": "march", "name": "Разминка: марш на месте", "reps": 60, "setCount": 2, "target": "2 × 60 сек", "tip": "Колени высоко, руки работают. Просто разогреться.", "unit": "сек"}, {"fig": "deadbug", "name": "Мёртвый жук", "reps": 8, "setCount": 3, "target": "3 × 8 на сторону", "tip": "Поясница всё время прижата к полу. Рука и противоположная нога уходят за 2–3 секунды, выдох на усилии.", "unit": "повт"}, {"fig": "birddog", "name": "Птица-собака", "reps": 8, "setCount": 3, "target": "3 × 8 на сторону", "tip": "В верхней точке задержись на 2 секунды. Представь, что на пояснице стакан воды.", "unit": "повт"}, {"fig": "sideplank", "name": "Боковая планка", "reps": 20, "setCount": 2, "target": "2 × 20 сек на сторону", "tip": "Можно с колена, если таз проваливается.", "unit": "сек"}, {"fig": "plank", "name": "Планка на локтях", "reps": 30, "setCount": 2, "target": "2 × 30 сек", "tip": "В прошлый раз планка не сделана, закрываем сегодня.", "unit": "сек"}], "note": "Лёгкий день: пульс в покое сегодня 64 при обычных 53–58, телу нужно восстановиться. Медленно и под контролем, отдых 30–40 сек. В конце поставь оценку ощущений, без неё мне сложнее подбирать нагрузку.", "rules": "Каждый день движение, но не каждый день тяжело. Силовые и бег в разные дни.\nБег: спокойный темп, пульс до 150. Выше — переходи на шаг, пока не опустится до 130. Записывай пробежку на часах, я увижу её в «Фитнесе».\nОстрая боль в суставах — стоп и пиши мне.\nЕсли всё далось на «1–2», в следующий раз добавлю повторы или вес.\nПульс в покое заметно выше обычного или сон меньше 6 часов — день облегчаем.", "title": "Кор и баланс", "week": [{"day": "Чт", "focus": "Кор и баланс (сегодня)"}, {"day": "Пт", "focus": "Силовая A+: присед, отжимания с носков, тяга"}, {"day": "Сб", "focus": "Бег № 1: 20 мин, бег чередуем с шагом, пульс до 150"}, {"day": "Вс", "focus": "Силовая B: выпады, румынская тяга"}, {"day": "Пн", "focus": "Прогулка 30+ мин + растяжка"}, {"day": "Вт", "focus": "Бег № 2: 20 мин, пульс до 150"}, {"day": "Ср", "focus": "Кор и баланс"}]};
-  const SEED_LOGS = {"2026-11-01": {"comment": "Ягодичный мост неэффективен", "date": "2026-11-01", "exercises": [{"fig": "", "name": "Гоблет-присед с гантелью", "note": "", "sets": [{"done": true, "v": 10}, {"done": true, "v": 10}, {"done": true, "v": 10}], "target": "3 × 10", "unit": "повт", "weight": "Гантеля 10кг"}, {"fig": "", "name": "Отжимания с колен", "note": "", "sets": [{"done": true, "v": 8}, {"done": true, "v": 8}, {"done": true, "v": 8}], "target": "3 × 8", "unit": "повт", "weight": ""}, {"fig": "", "name": "Тяга гантели в наклоне", "note": "", "sets": [{"done": true, "v": 10}, {"done": true, "v": 10}, {"done": true, "v": 10}], "target": "3 × 10 на руку", "unit": "повт", "weight": "10кг"}, {"fig": "", "name": "Ягодичный мостик", "note": "", "sets": [{"done": true, "v": 12}, {"done": true, "v": 12}, {"done": false, "v": 12}], "target": "3 × 12", "unit": "повт", "weight": ""}, {"fig": "", "name": "Планка на локтях", "note": "", "sets": [{"done": true, "v": 20}, {"done": true, "v": 20}, {"done": true, "v": 20}], "target": "3 × 20 сек", "unit": "сек", "weight": ""}], "feeling": "1", "planTitle": "Всё тело, знакомство", "savedAt": "2026-11-01T09:28:52.099Z"}, "2026-11-04": {"comment": "", "date": "2026-11-04", "exercises": [{"fig": "lunge", "name": "Выпады назад с гантелями", "note": "", "sets": [{"done": true, "v": 8}, {"done": true, "v": 8}, {"done": true, "v": 8}], "target": "3 × 8 на ногу", "unit": "повт", "weight": ""}, {"fig": "pushup", "name": "Отжимания с колен", "note": "Обычные отжимания ", "sets": [{"done": true, "v": 10}, {"done": true, "v": 10}, {"done": true, "v": 10}], "target": "3 × 10", "unit": "повт", "weight": ""}, {"fig": "rdl", "name": "Румынская тяга с гантелями", "note": "", "sets": [{"done": false, "v": 10}, {"done": false, "v": 10}, {"done": false, "v": 10}], "target": "3 × 10", "unit": "повт", "weight": ""}, {"fig": "row", "name": "Тяга гантели в наклоне", "note": "", "sets": [{"done": true, "v": 12}, {"done": true, "v": 12}, {"done": true, "v": 12}], "target": "3 × 12 на руку", "unit": "повт", "weight": ""}, {"fig": "plank", "name": "Планка на локтях", "note": "", "sets": [{"done": false, "v": 30}, {"done": false, "v": 30}, {"done": false, "v": 30}], "target": "3 × 30 сек", "unit": "сек", "weight": ""}], "feeling": "", "planTitle": "Всё тело B, шаг вперёд", "savedAt": "2026-11-04T08:49:04.507Z"}};
-  let period = 'new', coachMsg = ['',''];
-  function exportLogs(){
-    const all = Object.values(logs).sort((a,b)=>a.date.localeCompare(b.date));
-    if (period==='all') return all;
-    if (period==='7'){ const d=new Date(); d.setDate(d.getDate()-6); const from=ymd(d); return all.filter(x=>x.date>=from); }
-    const last = LS.get('lastExport');
-    return last ? all.filter(x=>(x.savedAt||x.date) > last) : all;
-  }
-  function exportText(){
-    const list = exportLogs();
-    const lines = ['ДНЕВНИК ТРЕНИРОВОК · лог для тренера',
-      'Выгружено: '+new Date().toLocaleString('ru-RU'),
-      'Текущий план: '+(plan?(plan.title||'')+' ('+(plan.date||'')+')':'нет'), ''];
-    if (!list.length) lines.push('Новых записей нет.');
-    list.forEach(d=>{
-      lines.push('■ '+d.date+(d.feeling?' · ощущения '+d.feeling+'/5':'')+(d.planTitle?' · '+d.planTitle:''));
-      d.exercises.forEach(e=>{
-        const s = e.sets.map(x=>x.v+(x.done?'':'✗')).join(', ');
-        lines.push('  - '+e.name+': '+s+' '+e.unit+(e.weight?' · '+e.weight:'')+(e.note?' · «'+e.note+'»':''));
-      });
-      if (d.comment) lines.push('  Комментарий: '+d.comment);
-    });
-    lines.push('', '✗ = подход не отмечен как выполненный', '', '---JSON---', JSON.stringify({logs:list}));
-    return lines.join('\n');
-  }
-  function markExported(){ LS.set('lastExport', new Date().toISOString()); }
-  function setCoachMsg(t,c){ coachMsg=[t,c]; const el=$('#coach-status'); if(el){el.textContent=t; el.className='status '+c;} }
-
-  function renderCoach(){
-    const v = $('#view-coach'); if (!v) return;
-    const n = exportLogs().length;
-    v.innerHTML = `
-      <div class="panel">
-        <h3>1. Отправить лог тренеру</h3>
-        <div class="seg">
-          <button data-p="new" aria-pressed="${period==='new'}">Новые</button>
-          <button data-p="7" aria-pressed="${period==='7'}">7 дней</button>
-          <button data-p="all" aria-pressed="${period==='all'}">Всё</button>
-        </div>
-        <p class="hint">Записей в выгрузке: <b class="num">${n}</b>. Отправь текст в чат с Claude и напиши «записал».</p>
-        <textarea id="export-text" readonly aria-label="Текст лога">${esc(exportText())}</textarea>
-        <div class="btnrow">
-          ${navigator.share?'<button class="btn acc" data-c="share">Поделиться</button>':''}
-          <button class="btn" data-c="copy">Скопировать</button>
-          <button class="btn" data-c="file">Скачать файл</button>
-        </div>
+  /* ---------- actions ---------- */
+  function migrateTo(e, date){ const c = {id:uid(), type:e.type, text:e.text, state:'open', pri:e.pri, date, created:Date.now()};
+    e.state = 'migrated'; e.to = dayTitle(date); entries.push(c); }
+  function scheduleTo(e, m){ const c = {id:uid(), type:e.type, text:e.text, state:'open', pri:e.pri, month:m, created:Date.now()};
+    e.state = 'scheduled'; e.to = MONN[parse(m+'-01').getMonth()].toLowerCase(); entries.push(c); }
+  function openSheet(id){
+    const e = entries.find(x=>x.id===id); if (!e) return;
+    const isTask = e.type==='task', open = e.state==='open', tm = addM(e.month || ym(parse(e.date||TODAY)), 1);
+    $('#sheet').innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-label="Запись">
+      <div class="eyebrow">${e.type==='task'?'Задача':e.type==='event'?'Событие':'Заметка'} · ${e.date?dayTitle(e.date):'задачи месяца'}</div>
+      <textarea id="edit-text" aria-label="Текст записи">${esc(e.text)}</textarea>
+      <div class="seg" role="group" aria-label="Тип"><button data-settype="task" aria-pressed="${e.type==='task'}">• задача</button><button data-settype="event" aria-pressed="${e.type==='event'}">○ событие</button><button data-settype="note" aria-pressed="${e.type==='note'}">– заметка</button></div>
+      <div class="acts">
+        ${isTask&&open?`<button class="btn" data-s="done">× Выполнено</button>`:''}
+        ${isTask&&e.state!=='open'?`<button class="btn" data-s="reopen">• Вернуть в работу</button>`:''}
+        ${open&&!e.date?`<button class="btn" data-s="today">На сегодня</button>`:''}
+        ${open&&e.date?`<button class="btn" data-s="tomorrow">&gt; На ${e.date===TODAY?'завтра':'следующий день'}</button>`:''}
+        ${open&&e.date&&e.date<TODAY?`<button class="btn" data-s="today">&gt; На сегодня</button>`:''}
+        ${open?`<button class="btn" data-s="month">&lt; В ${MONN[parse(tm+'-01').getMonth()].toLowerCase()}</button>`:''}
+        <button class="btn" data-s="pri">${e.pri?'Снять приоритет':'* Важно'}</button>
+        ${e.state!=='cancelled'?`<button class="btn" data-s="cancel">Неактуально</button>`:''}
+        <button class="btn del" data-s="del">Удалить</button>
       </div>
-      <div class="panel">
-        <h3>2. Загрузить план от тренера</h3>
-        <p class="hint">Скопируй из чата весь блок с планом (он начинается с «{») и вставь сюда.</p>
-        <textarea id="import-text" placeholder='{"date": "…", "title": "…", "exercises": [ … ] }'></textarea>
-        <div class="btnrow"><button class="btn acc" data-c="import">Применить план</button></div>
-      </div>
-      <div class="panel">
-        <h3>Резервная копия</h3>
-        <p class="hint">Всё хранится только на этом устройстве, в этом браузере. Если очистить данные Safari, записи пропадут. Иногда сохраняй копию: это файл со всеми записями и планом. Чтобы восстановить, вставь его содержимое в поле выше.</p>
-        <div class="btnrow"><button class="btn" data-c="backup">Скачать копию</button></div>
-      </div>
-      <div id="coach-status" class="status ${coachMsg[1]}">${esc(coachMsg[0])}</div>`;
+      <button class="btn acc" data-s="save">Сохранить и закрыть</button></div>`;
+    $('#sheet').hidden = false; $('#sheet').dataset.id = id;
   }
-  function download(name, text){
-    const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'}));
-    a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},1000);
+  $('#sheet').addEventListener('click', ev=>{
+    const el = $('#sheet'); if (ev.target===el){ el.hidden=true; return; }
+    const e = entries.find(x=>x.id===el.dataset.id); if (!e) return;
+    const t = ev.target.closest('[data-settype]'); if (t){ e.type = t.dataset.settype; if (e.type!=='task' && e.state==='done') e.state='open'; save(); openSheet(e.id); render(); return; }
+    const b = ev.target.closest('[data-s]'); if (!b) return; const a = b.dataset.s;
+    const txt = $('#edit-text').value.trim(); if (txt) e.text = txt;
+    if (a==='done') e.state = 'done';
+    if (a==='reopen') e.state = 'open';
+    if (a==='tomorrow') migrateTo(e, addD(e.date, 1));
+    if (a==='today') migrateTo(e, TODAY);
+    if (a==='month') scheduleTo(e, addM(e.month || ym(parse(e.date||TODAY)), 1));
+    if (a==='pri'){ e.pri = !e.pri; save(); openSheet(e.id); render(); return; }
+    if (a==='cancel') e.state = 'cancelled';
+    if (a==='del'){ if (!b.dataset.sure){ b.dataset.sure='1'; b.textContent='Точно удалить?'; return; } entries = entries.filter(x=>x!==e); }
+    save(); el.hidden = true; render();
+  });
+  document.addEventListener('keydown', e=>{ if (e.key==='Escape') $('#sheet').hidden = true; });
+
+  function onClick(ev){
+    const tp = ev.target.closest('[data-type]'); if (tp){ addType = tp.dataset.type; const v=$('#add-day')||$('#add-month'); const keep = v?v.value:''; render(); const n=$('#add-day')||$('#add-month'); if(n){ n.value=keep; n.focus(); } return; }
+    const ad = ev.target.closest('[data-add]'); if (ad){ addEntry(ad.dataset.add); return; }
+    const tk = ev.target.closest('[data-tick]'); if (tk){ const e = entries.find(x=>x.id===tk.dataset.tick); if (e && e.type==='task'){ e.state = e.state==='done'?'open':'done'; save(); render(); } return; }
+    const ed = ev.target.closest('[data-edit]'); if (ed){ openSheet(ed.dataset.edit); return; }
+    const mg = ev.target.closest('[data-mig]'); if (mg){ migrateTo(entries.find(x=>x.id===mg.dataset.mig), TODAY); save(); render(); return; }
+    const x = ev.target.closest('[data-x]'); if (x){ entries.find(e=>e.id===x.dataset.x).state='cancelled'; save(); render(); return; }
+    if (ev.target.closest('[data-migall]')){ entries.filter(e=>e.type==='task'&&e.state==='open'&&e.date&&e.date<TODAY).forEach(e=>migrateTo(e,TODAY)); save(); render(); return; }
+    const dn = ev.target.closest('[data-day]'); if (dn){ const k=+dn.dataset.day; day = k===0?TODAY:addD(day,k); render(); return; }
+    const wn = ev.target.closest('[data-week]'); if (wn){ const k=+wn.dataset.week; weekOf = k===0?TODAY:addD(weekOf,7*k); renderWeek(); return; }
+    const mn = ev.target.closest('[data-month]'); if (mn){ const k=+mn.dataset.month; month = k===0?ym(new Date()):addM(month,k); renderMonth(); return; }
+    const od = ev.target.closest('[data-open-day]'); if (od){ day = od.dataset.openDay; show('day'); return; }
   }
-  function applyImport(raw){
-    const i=raw.indexOf('{'), j=raw.lastIndexOf('}');
-    if (i<0||j<i) throw new Error('Не нашёл план. Скопируй блок целиком, от «{» до «}».');
-    let obj; try{ obj=JSON.parse(raw.slice(i,j+1)); }catch(e){ throw new Error('Текст обрезан или изменён. Скопируй блок из чата ещё раз целиком.'); }
-    if (obj.templates){ LS.set('templates', Object.assign(LS.get('templates')||{}, obj.templates));
-      if (!obj.exercises && !obj.plan && !obj.logs){ draft=null; return 'Программа обновлена.'; } }
-    if (obj.plan || obj.logs){
-      if (obj.logs){ const arr=Array.isArray(obj.logs)?obj.logs:Object.values(obj.logs);
-        arr.forEach(d=>{ if(d&&d.date&&Array.isArray(d.exercises)) logs[d.date]=d; }); LS.set('logs',logs); }
-      if (obj.plan) obj = obj.plan; else return 'Записи восстановлены.';
-    }
-    if (!Array.isArray(obj.exercises)) throw new Error('В плане нет списка упражнений.');
-    plan = obj; LS.set('plan', plan);
-    if (!logs[TODAY]){ draft=null; dirty=false; LS.set('draft-'+TODAY,null); }
-    return 'План «'+(plan.title||'')+'» загружен. Он во вкладке «Сегодня».';
-  }
-  $('#view-coach').addEventListener('click', async ev=>{
-    const p = ev.target.closest('[data-p]'); if (p){ period=p.dataset.p; renderCoach(); return; }
-    const b = ev.target.closest('[data-c]'); if (!b) return;
-    const c = b.dataset.c, text = exportText();
-    if (c==='share'){
-      try{ await navigator.share({title:'Лог тренировок', text}); markExported(); setCoachMsg('Отправлено.','ok'); }
-      catch(e){ if(e && e.name!=='AbortError') setCoachMsg('Не получилось поделиться. Нажми «Скопировать».','err'); }
-    } else if (c==='copy'){
-      try{ await navigator.clipboard.writeText(text); markExported(); setCoachMsg('Скопировано. Вставь в чат с Claude.','ok'); }
-      catch(e){ const t=$('#export-text'); t.focus(); t.select(); setCoachMsg('Текст выделен. Скопируй его вручную.',''); }
-    } else if (c==='file'){
-      download('trenirovki-'+TODAY+'.txt', text); markExported(); setCoachMsg('Файл сохранён. Прикрепи его в чат с Claude.','ok');
-    } else if (c==='backup'){
-      download('trenirovki-backup-'+TODAY+'.json', JSON.stringify({plan, logs}, null, 1)); setCoachMsg('Копия сохранена.','ok');
-    } else if (c==='import'){
-      try{ const msg=applyImport($('#import-text').value); setCoachMsg(msg,'ok'); renderAll(); renderToday(); }
-      catch(e){ setCoachMsg(e.message,'err'); }
-      return;
-    }
-    const keep = coachMsg; renderCoach(); setCoachMsg(keep[0], keep[1]);
+  ['#view-day','#view-week','#view-month','#streaks'].forEach(s=>{
+    $(s).addEventListener('click', onClick);
+    $(s).addEventListener('keydown', ev=>{ if (ev.key==='Enter' && /^add-/.test(ev.target.id||'')){ ev.preventDefault(); addEntry(ev.target.id.slice(4)); } });
+  });
+  let noteTimer = null;
+  document.addEventListener('input', ev=>{
+    const id = ev.target.id; if (id!=='note-W' && id!=='note-M') return;
+    const key = id==='note-W' ? 'W:'+monday(weekOf) : 'M:'+month;
+    notes[key] = ev.target.value; clearTimeout(noteTimer); noteTimer = setTimeout(()=>LS.set('notes',notes), 400);
   });
 
-  /* ---------- offline program: built-in templates + auto-progression ---------- */
-  const BUILTIN = {
-    A:{title:'Силовая A',duration:'≈20 мин',note:'Разминка 3 мин, отдых между подходами 45–60 сек.',exercises:[
-      {name:'Гоблет-присед с гантелью',fig:'squat',unit:'повт',setCount:3,reps:10,step:1,cap:15,suffix:'',tip:'Гантель у груди, спина прямая, колени смотрят туда же, куда носки.'},
-      {name:'Отжимания',fig:'pushup',unit:'повт',setCount:3,reps:10,step:1,cap:20,suffix:'',tip:'С носков. Тело прямой линией, грудь почти до пола.'},
-      {name:'Тяга гантели в наклоне',fig:'row',unit:'повт',setCount:3,reps:12,step:1,cap:15,suffix:' на руку',tip:'Локоть к поясу, вверху задержись на секунду.'},
-      {name:'Румынская тяга с гантелями',fig:'rdl',unit:'повт',setCount:3,reps:10,step:1,cap:15,suffix:'',tip:'Таз назад, спина прямая, гантели вдоль ног до середины голени.'},
-      {name:'Планка на локтях',fig:'plank',unit:'сек',setCount:3,reps:30,step:5,cap:60,suffix:' сек',tip:'Ягодицы сжаты, живот подтянут.'}]},
-    B:{title:'Силовая B',duration:'≈20 мин',note:'Разминка 3 мин, отдых между подходами 45–60 сек.',exercises:[
-      {name:'Выпады назад с гантелями',fig:'lunge',unit:'повт',setCount:3,reps:8,step:1,cap:12,suffix:' на ногу',tip:'Опускайся вертикально, переднее колено над стопой.'},
-      {name:'Отжимания',fig:'pushup',unit:'повт',setCount:3,reps:10,step:1,cap:20,suffix:'',tip:'С носков. Тело прямой линией, грудь почти до пола.'},
-      {name:'Румынская тяга с гантелями',fig:'rdl',unit:'повт',setCount:3,reps:10,step:1,cap:15,suffix:'',tip:'Таз назад, спина прямая, гантели вдоль ног до середины голени.'},
-      {name:'Тяга гантели в наклоне',fig:'row',unit:'повт',setCount:3,reps:12,step:1,cap:15,suffix:' на руку',tip:'Локоть к поясу, вверху задержись на секунду.'},
-      {name:'Боковая планка',fig:'sideplank',unit:'сек',setCount:2,reps:20,step:5,cap:45,suffix:' сек на сторону',tip:'Таз высоко, тело одной линией. Можно с колена.'}]},
-    core:{title:'Кор и баланс',duration:'≈15 мин',note:'Медленно и под контролем, отдых 30–40 сек.',exercises:[
-      {name:'Разминка: марш на месте',fig:'march',unit:'сек',setCount:2,reps:60,suffix:' сек',tip:'Колени высоко, руки работают.'},
-      {name:'Мёртвый жук',fig:'deadbug',unit:'повт',setCount:3,reps:8,step:1,cap:12,suffix:' на сторону',tip:'Поясница прижата к полу, выдох на усилии.'},
-      {name:'Птица-собака',fig:'birddog',unit:'повт',setCount:3,reps:8,step:1,cap:12,suffix:' на сторону',tip:'Вверху задержись на 2 секунды.'},
-      {name:'Боковая планка',fig:'sideplank',unit:'сек',setCount:2,reps:20,step:5,cap:45,suffix:' сек на сторону',tip:'Таз высоко, тело одной линией. Можно с колена.'},
-      {name:'Планка на локтях',fig:'plank',unit:'сек',setCount:2,reps:30,step:5,cap:60,suffix:' сек',tip:'Ягодицы сжаты, живот подтянут.'}]},
-    run:{title:'Лёгкий бег',duration:'≈25 мин',note:'Пульс до 150, темп такой, чтобы можно было говорить. Выше — переходи на шаг. Запиши пробежку на часах как «Бег».',exercises:[
-      {name:'Разминка: быстрый шаг',fig:'march',unit:'мин',setCount:1,reps:5,targetText:'5 мин',tip:'Разогрейся перед бегом.'},
-      {name:'Бег 2 мин + шаг 1 мин',fig:'run',unit:'мин бега',setCount:6,reps:2,targetText:'6 раундов',tip:'Отмечай каждый раунд галочкой.'},
-      {name:'Заминка: шаг',fig:'march',unit:'мин',setCount:1,reps:3,targetText:'3 мин',tip:'Дай пульсу успокоиться.'}]},
-    mobility:{title:'Прогулка и мобильность',duration:'≈40 мин',note:'Лёгкий день: двигаемся, но без нагрузки.',exercises:[
-      {name:'Прогулка',fig:'march',unit:'мин',setCount:1,reps:30,targetText:'30+ мин',tip:'Обычным бодрым шагом.'},
-      {name:'Птица-собака',fig:'birddog',unit:'повт',setCount:2,reps:8,suffix:' на сторону',tip:'Медленно, для спины.'},
-      {name:'Мёртвый жук',fig:'deadbug',unit:'повт',setCount:2,reps:8,suffix:' на сторону',tip:'Медленно, поясница прижата.'}]}
-  };
-  function templates(){ return Object.assign({}, BUILTIN, LS.get('templates')||{}); }
-  function typeFor(){
-    const wd = WD[new Date().getDay()];
-    const w = plan && Array.isArray(plan.week) && plan.week.find(x=>x.day===wd);
-    if (w){ if (w.type) return w.type; const f = w.focus||'';
-      if (/бег/i.test(f)) return 'run'; if (/кор|баланс/i.test(f)) return 'core';
-      if (/прогулк|растяж|мобильн|отдых/i.test(f)) return 'mobility'; if (/B/.test(f)) return 'B'; return 'A'; }
-    return {'Пн':'mobility','Вт':'run','Ср':'core','Чт':'A','Пт':'B','Сб':'run','Вс':'A'}[wd];
+  /* ---------- more ---------- */
+  let moreMsg = ['',''];
+  function exportText(){
+    const from = addD(TODAY,-13), list = entries.filter(e=>(e.date&&e.date>=from&&e.date<=addD(TODAY,30)) || (e.month&&!e.date&&e.month>=ym(new Date())));
+    const lines = ['ДНЕВНИК · выгрузка для Claude', 'Выгружено: '+new Date().toLocaleString('ru-RU'), ''];
+    const wk = notes['W:'+monday(TODAY)], mo = notes['M:'+ym(new Date())];
+    if (wk) lines.push('Фокус недели: '+wk); if (mo) lines.push('Цели месяца: '+mo); if (wk||mo) lines.push('');
+    const byDay = {}; list.filter(e=>e.date).forEach(e=>(byDay[e.date] ||= []).push(e));
+    Object.keys(byDay).sort().forEach(d=>{ lines.push('■ '+d+' ('+WD[parse(d).getDay()]+')'); byDay[d].forEach(e=>lines.push('  '+sig(e)+' '+(e.pri?'* ':'')+e.text+(e.state==='cancelled'?' (неактуально)':''))); });
+    const mt = list.filter(e=>!e.date); if (mt.length){ lines.push('■ Задачи месяца'); mt.forEach(e=>lines.push('  '+sig(e)+' '+e.text+' ['+e.month+']')); }
+    lines.push('', 'Ключ: • задача, × выполнена, > перенесена, < в месяц, ○ событие, – заметка');
+    return lines.join('\n');
   }
-  function lastFor(name){
-    const ds = Object.keys(logs).filter(d=>d<TODAY).sort().reverse();
-    for (const d of ds){ const e=(logs[d].exercises||[]).find(x=>x.name===name); if (e) return {e, feeling: logs[d].feeling||''}; }
-    return null;
+  function renderMore(){
+    $('#view-more').innerHTML = `<div class="page"><h3>Ключ</h3><div class="legend">
+        <span><b>•</b> задача</span><span><b>×</b> выполнена</span><span><b>&gt;</b> перенесена на день</span><span><b>&lt;</b> перенесена в месяц</span>
+        <span><b>○</b> событие</span><span><b>–</b> заметка</span><span><b style="color:var(--pri)">*</b> важно</span><span><s>текст</s> неактуально</span></div>
+        <p class="hint">Пиши коротко, одной строкой. Каждое утро на странице «День» появятся незакрытые задачи с прошлых дней: перенеси нужные на сегодня, а лишние отметь как неактуальные. Задачи без точной даты пиши на странице «Месяц».</p></div>
+      <div class="page"><h3>Claude и копия</h3><p class="hint">Общая выгрузка всего приложения для Claude, загрузка планов от Claude и резервная копия — во вкладке <a href="obmen/">Claude</a> внизу.</p></div>
+      <div class="status ${moreMsg[1]}" id="more-status">${esc(moreMsg[0])}</div>`;
+    moreMsg = ['',''];
   }
-  function fmt(x){ return x.targetText || (x.setCount+' × '+x.reps+(x.suffix||'')); }
-  function progress(t){
-    const x = Object.assign({}, t), L = lastFor(t.name);
-    if (L) x.weight = L.e.weight||'';
-    if (!L || !t.step){ x.target = fmt(x); return x; }
-    const sets = L.e.sets||[], vals = sets.map(s=>Number(s.v)||0);
-    const allDone = sets.length>0 && sets.every(s=>s.done), top = Math.max(...vals, 0), f = Number(L.feeling)||0;
-    let msg;
-    if (allDone && f<=3){
-      if (t.cap && top>=t.cap){ x.reps = top; msg = 'Ты дошёл до '+top+'. Пора взять вес тяжелее или усложнить вариант и вернуться к '+t.reps+'.'; }
-      else { x.reps = top + t.step; msg = 'Прошлый раз '+vals.join(', ')+', сегодня '+x.reps+'.'; }
-    } else if (allDone){ x.reps = top; msg = 'Прошлый раз было тяжело, закрепляем '+top+'.'; }
-    else { x.reps = top||t.reps; msg = 'Прошлый раз не все подходы сделаны, повторяем '+x.reps+'.'; }
-    x.tip = msg+' '+(t.tip||''); x.target = fmt(x); return x;
-  }
-  function getActive(){
-    if (plan && plan.date===TODAY) return plan;
-    const type = typeFor(), T = templates()[type] || templates().A;
-    return { date: TODAY, auto: true, type, title: T.title, duration: T.duration,
-      dayLabel: 'Автоплан · '+WDL[new Date().getDay()],
-      note: (T.note||'')+' Приложение собрало план само по программе тренера: где в прошлый раз было легко, нагрузка уже добавлена.',
-      exercises: T.exercises.map(progress), week: plan && plan.week, rules: plan && plan.rules };
-  }
+  function setMore(t,c){ const e=$('#more-status'); if(e){ e.textContent=t; e.className='status '+c; } }
+  function download(name, text){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'})); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},1000); }
+  $('#view-more').addEventListener('click', async ev=>{
+    const b = ev.target.closest('[data-m]'); if (!b) return; const a = b.dataset.m;
+    if (a==='share'){ try{ await navigator.share({title:'Дневник', text:exportText()}); setMore('Отправлено.','ok'); }catch(e){ if(e&&e.name!=='AbortError') setMore('Не получилось. Нажми «Скопировать».',''); } }
+    if (a==='copy'){ try{ await navigator.clipboard.writeText(exportText()); setMore('Скопировано.','ok'); }catch(e){ const t=$('#export-text'); t.focus(); t.select(); setMore('Текст выделен, скопируй вручную.',''); } }
+    if (a==='backup'){ download('dnevnik-backup-'+TODAY+'.json', JSON.stringify({entries, notes})); setMore('Копия сохранена.','ok'); }
+    if (a==='import'){ const s=$('#import-text').value, i=s.indexOf('{'), j=s.lastIndexOf('}');
+      try{ const o = JSON.parse(s.slice(i,j+1)); if (!Array.isArray(o.entries)) throw 0;
+        const ids = new Set(entries.map(e=>e.id)); o.entries.forEach(e=>{ if(e&&e.id&&!ids.has(e.id)) entries.push(e); }); if (o.notes) notes = Object.assign(notes, o.notes);
+        save(); LS.set('notes',notes); moreMsg=['Восстановлено записей: '+o.entries.length+'.','ok']; renderMore(); }
+      catch(e){ setMore('Не получилось прочитать копию. Вставь файл целиком.',''); } }
+  });
 
-  /* ---------- boot ---------- */
-  plan = LS.get('plan') || DEFAULT_PLAN;
-  const stored = LS.get('logs');
-  logs = stored || SEED_LOGS;
-  if (!stored){ LS.set('logs', logs); LS.set('plan', plan); LS.set('lastExport', new Date().toISOString()); }
-  renderAll();
+  /* ---------- nav ---------- */
+  const tabs = ['day','week','month','more']; let cur = 'day';
+  function render(){ renderStreaks(); if (cur==='day') renderDay(); if (cur==='week') renderWeek(); if (cur==='month') renderMonth(); if (cur==='more') renderMore(); }
+  function show(t){ if (t!==cur) addType = 'task'; cur = t; tabs.forEach(o=>{ $('#tab-'+o).setAttribute('aria-selected', o===t); $('#view-'+o).hidden = o!==t; }); render(); window.scrollTo(0,0); }
+  tabs.forEach(t=>$('#tab-'+t).addEventListener('click',()=>show(t)));
+  show('day');
   if ('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
 })();
 </script>

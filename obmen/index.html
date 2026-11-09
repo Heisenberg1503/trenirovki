@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#F5F4EF">
+<link rel="apple-touch-icon" href="../icon-180.png">
+<link rel="icon" href="../icon-180.png">
+<title>Обмен с Claude</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: one column of three panels — send everything to Claude, apply what Claude sends back, keep a backup */
+:root{
+  --bg:#F5F4EF; --surface:#FFFFFF; --ink:#1D2033; --muted:#6B6D7A; --line:#E1DFD6;
+  --accent:#2E3A8C; --accent-ink:#FFFFFF; --accent-soft:#E3E6F6; --good:#1F7A55; --bad:#B4400E;
+  --f-hand:"Caveat","Segoe Print",cursive;
+  --f-body:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-num:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#14151C; --surface:#1C1E28; --ink:#E9EAF2; --muted:#9A9DAD; --line:#2E3140;
+  --accent:#9AA8F5; --accent-ink:#10132A; --accent-soft:#262C4D; --good:#5CC497; --bad:#F0A060; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#14151C; --surface:#1C1E28; --ink:#E9EAF2; --muted:#9A9DAD; --line:#2E3140;
+  --accent:#9AA8F5; --accent-ink:#10132A; --accent-soft:#262C4D; --good:#5CC497; --bad:#F0A060; color-scheme:dark}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+h1,h2,h3{margin:0;text-wrap:balance}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+h1{font-family:var(--f-hand);font-weight:700;font-size:40px;line-height:1}
+.page{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.page h3{font-family:var(--f-hand);font-size:26px;font-weight:700;line-height:1.1}
+.hint{font-size:14px;color:var(--muted);margin:0}
+.btn{border:1px solid var(--ink);background:none;border-radius:10px;padding:10px 14px;font-weight:600;text-align:center}
+.btn.acc{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap}.btnrow .btn{flex:1 1 130px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 12px;font-size:14px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px;width:100%;min-height:140px;font-family:var(--f-num);font-size:12px;resize:vertical}
+.status{font-size:14px;color:var(--muted);min-height:20px}
+.status.ok{color:var(--good)} .status.err{color:var(--bad)}
+.counts{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;font-size:14px}
+.counts span{background:var(--bg);border-radius:8px;padding:6px 10px}
+.counts b{font-family:var(--f-num)}
+label.file{position:relative;overflow:hidden}
+label.file input{position:absolute;inset:0;opacity:0;cursor:pointer}
+
+/* shared bottom bar */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:15;background:var(--surface);border-top:1px solid var(--line);
+  padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
+.tabbar div{display:flex;max-width:560px;margin:0 auto}
+.tabbar a{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 2px;text-decoration:none;color:var(--muted);font-size:11px;font-weight:600;border-radius:8px;min-width:0}
+.tabbar a svg{width:23px;height:23px}
+.tabbar a[aria-current="page"]{color:var(--accent)}
+body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><div class="eyebrow">Всё приложение целиком</div><h1>Обмен с Claude</h1></header>
+
+  <div class="page">
+    <h3>Отправить Claude</h3>
+    <p class="hint">Одна выгрузка за выбранный период: тренировки, привычки, занятия с таймером, слова и записи дневника. Отправь в чат и напиши, что нужно: разбор, новый план, новые слова.</p>
+    <div class="seg" role="group" aria-label="Период"><button data-days="7">7 дней</button><button data-days="14">14 дней</button><button data-days="30">30 дней</button></div>
+    <div class="counts" id="counts"></div>
+    <textarea readonly id="export-text" aria-label="Выгрузка"></textarea>
+    <div class="btnrow"><button class="btn acc" id="share" hidden>Поделиться</button><button class="btn" id="copy">Скопировать</button><button class="btn" id="file">Скачать файл</button></div>
+    <div class="status" id="export-status"></div>
+  </div>
+
+  <div class="page">
+    <h3>Загрузить от Claude</h3>
+    <p class="hint">Вставь блок, который я пришлю (начинается с «{»). Приложение само разберёт, что в нём: план тренировки, привычки, новые слова или записи в дневник.</p>
+    <textarea id="import-text" placeholder='{"plan": …, "habits": […], "words": […], "entries": […]}' aria-label="Вставить от Claude" style="min-height:100px"></textarea>
+    <div class="btnrow"><button class="btn acc" id="apply">Применить</button></div>
+    <div class="status" id="import-status"></div>
+  </div>
+
+  <div class="page">
+    <h3>Резервная копия</h3>
+    <p class="hint">Все данные лежат только на этом телефоне. Если очистить данные Safari, они пропадут. Раз в неделю-две сохраняй копию в «Файлы».</p>
+    <div class="btnrow"><button class="btn" id="backup">Скачать копию</button><label class="btn file">Восстановить из файла<input type="file" id="restore" accept=".json,application/json"></label></div>
+    <div class="status" id="backup-status"></div>
+  </div>
+</div>
+<nav class="tabbar" aria-label="Разделы"><div><a href="../"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/><path d="M9 8h6"/></svg><span>Дневник</span></a><a href="../trening/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/></svg><span>Тренировка</span></a><a href="../privychki/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg><span>Привычки</span></a><a href="../slova/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="13" height="14" rx="2"/><path d="M8 5V3h11a2 2 0 0 1 2 2v12h-5"/><path d="m6.5 15 3-7 3 7M7.5 13h4"/></svg><span>Слова</span></a><a href="../obmen/" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10l5-5 5 5M12 5v10"/><path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/></svg><span>Claude</span></a></div></nav>
+<script>
+(function(){
+  const $ = s => document.querySelector(s);
+  const pad = n => String(n).padStart(2,'0');
+  const ymd = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  const parse = s => { const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d||1); };
+  const addD = (s,n) => { const d=parse(s); d.setDate(d.getDate()+n); return ymd(d); };
+  const TODAY = ymd(new Date());
+  const WD = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+  const raw = k => { try{ return JSON.parse(localStorage.getItem(k)||'null'); }catch(e){ return null; } };
+  const put = (k,v) => { try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } };
+  const setStatus = (id,t,c) => { const e=$(id); e.textContent=t; e.className='status '+(c||''); };
+  let days = 14; try{ days = +localStorage.getItem('obmen-days') || 14; }catch(e){}
+
+  function build(){
+    const from = addD(TODAY, -(days-1)), inP = d => d>=from && d<=TODAY;
+    const dl = d => d.slice(8)+'.'+d.slice(5,7)+' '+WD[parse(d).getDay()];
+    const out = ['ВЫГРУЗКА ДЛЯ CLAUDE', 'Дата: '+new Date().toLocaleString('ru-RU')+' · период: '+days+' дн.', ''];
+    const c = {train:0, habits:0, words:0, entries:0};
+
+    /* workouts */
+    const logs = raw('logs')||{}, plan = raw('plan');
+    out.push('=== ТРЕНИРОВКИ ===');
+    if (plan) out.push('Последний план от тренера: '+(plan.title||'')+' ('+(plan.date||'')+')');
+    Object.keys(logs).filter(inP).sort().forEach(d=>{ const l=logs[d]; c.train++;
+      out.push('■ '+dl(d)+(l.planTitle?' · '+l.planTitle:'')+(l.feeling?' · ощущения '+l.feeling+'/5':''));
+      (l.exercises||[]).forEach(e=>out.push('  - '+e.name+': '+(e.sets||[]).map(s=>s.v+(s.done?'':'✗')).join(', ')+' '+(e.unit||'')+(e.weight?' · '+e.weight:'')+(e.note?' · «'+e.note+'»':'')));
+      if (l.comment) out.push('  Комментарий: '+l.comment); });
+    if (!c.train) out.push('Записей нет.');
+    out.push('✗ = подход не отмечен', '');
+
+    /* habits */
+    const habits = (raw('hab-habits')||[]).filter(h=>h.auto!=='menu'), marks = raw('hab-marks')||{}, sess = raw('hab-sessions')||[];
+    out.push('=== ПРИВЫЧКИ ===');
+    const dList = Array.from({length:days},(_,i)=>addD(from,i));
+    const wDone = d => { const l=logs[d]; return l && (l.exercises||[]).some(e=>(e.sets||[]).some(s=>s.done)); };
+    habits.forEach(h=>{ const t = h.kind==='count'?(h.target||1):1;
+      const v = d => h.auto==='workout' ? (wDone(d)?1:0) : ((marks[d]||{})[h.id]||0);
+      const n = dList.filter(d=>v(d)>=t).length; c.habits += n;
+      out.push('■ '+h.name+(h.kind==='count'?' (цель '+h.target+' '+(h.unit||'')+')':'')+' · выполнено '+n+'/'+days);
+      out.push('  '+dList.map(d=>d.slice(8)+':'+(h.kind==='count'?v(d):(v(d)>=t?'✓':'·'))).join(' ')); });
+    if (!habits.length) out.push('Привычки не настроены.');
+    const ss = sess.filter(s=>inP(s.date)).sort((a,b)=>a.start-b.start);
+    if (ss.length){ out.push('Занятия с таймером:'); ss.forEach(s=>out.push('  '+dl(s.date)+' · '+s.name+' · '+Math.max(1,Math.round(s.secs/60))+' мин'+(s.note?' · «'+s.note+'»':''))); }
+    out.push('');
+
+    /* words */
+    const words = raw('slv-words')||[], wlog = raw('slv-log')||{};
+    out.push('=== АНГЛИЙСКИЕ СЛОВА ===');
+    if (words.length){
+      const learned = words.filter(w=>w.box>=5).length, fresh = words.filter(w=>w.box===0&&!w.seen).length;
+      out.push('Всего '+words.length+', выучено '+learned+', в работе '+(words.length-learned-fresh)+', новых '+fresh);
+      Object.keys(wlog).filter(inP).sort().forEach(d=>{ const L=wlog[d]; c.words++; out.push('  '+dl(d)+': повторов '+(L.reviews||0)+', новых '+(L.new||0)+', '+Math.round((L.secs||0)/60)+' мин'); });
+      const hard = words.filter(w=>w.wrong>0).sort((a,b)=>(b.wrong-b.right)-(a.wrong-a.right)).slice(0,15);
+      if (hard.length) out.push('Сложные: '+hard.map(w=>w.en+' ('+w.right+'/'+(w.right+w.wrong)+')').join(', '));
+    } else out.push('Словарь ещё не открывался.');
+    out.push('');
+
+    /* diary */
+    const entries = raw('bj-entries')||[], notes = raw('bj-notes')||{};
+    const SIG = e => e.type==='event'?'○':e.type==='note'?'–':({done:'×',migrated:'>',scheduled:'<'}[e.state]||'•');
+    out.push('=== ДНЕВНИК ===');
+    const mon = (()=>{ const d=new Date(); d.setDate(d.getDate()-((d.getDay()+6)%7)); return ymd(d); })(), mo = TODAY.slice(0,7);
+    if (notes['W:'+mon]) out.push('Фокус недели: '+notes['W:'+mon]);
+    if (notes['M:'+mo]) out.push('Цели месяца: '+notes['M:'+mo]);
+    const by = {}; entries.filter(e=>e.date && e.date>=from && e.date<=addD(TODAY,14) && !/^x\d$/.test(e.id)).forEach(e=>(by[e.date] ||= []).push(e));
+    Object.keys(by).sort().forEach(d=>{ out.push('■ '+dl(d)); by[d].sort((a,b)=>a.created-b.created).forEach(e=>{ c.entries++; out.push('  '+SIG(e)+' '+(e.pri?'* ':'')+e.text+(e.state==='cancelled'?' (неактуально)':'')); }); });
+    const mt = entries.filter(e=>!e.date && e.month && e.month>=mo && e.state==='open');
+    if (mt.length){ out.push('■ Задачи месяца без даты'); mt.forEach(e=>out.push('  • '+e.text+' ['+e.month+']')); }
+    if (!Object.keys(by).length && !mt.length) out.push('Записей нет.');
+    out.push('Ключ: • задача, × выполнена, > перенесена, < в месяц, ○ событие, – заметка');
+
+    $('#export-text').value = out.join('\n');
+    $('#counts').innerHTML = `<span>Тренировок: <b>${c.train}</b></span><span>Отметок привычек: <b>${c.habits}</b></span><span>Дней со словами: <b>${c.words}</b></span><span>Записей дневника: <b>${c.entries}</b></span>`;
+    document.querySelectorAll('[data-days]').forEach(b=>b.setAttribute('aria-pressed', +b.dataset.days===days));
+  }
+  document.querySelectorAll('[data-days]').forEach(b=>b.addEventListener('click',()=>{ days=+b.dataset.days; try{localStorage.setItem('obmen-days',days);}catch(e){} build(); }));
+  if (navigator.share){ $('#share').hidden = false; $('#share').addEventListener('click', async()=>{ try{ await navigator.share({title:'Выгрузка для Claude', text:$('#export-text').value}); setStatus('#export-status','Отправлено.','ok'); }catch(e){ if(e&&e.name!=='AbortError') setStatus('#export-status','Не получилось. Нажми «Скопировать».','err'); } }); }
+  $('#copy').addEventListener('click', async()=>{ try{ await navigator.clipboard.writeText($('#export-text').value); setStatus('#export-status','Скопировано. Вставь в чат с Claude.','ok'); }catch(e){ const t=$('#export-text'); t.focus(); t.select(); setStatus('#export-status','Текст выделен, скопируй его вручную.',''); } });
+  function download(name, text, type){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type:type||'text/plain;charset=utf-8'})); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},1000); }
+  $('#file').addEventListener('click', ()=>{ download('vygruzka-'+TODAY+'.txt', $('#export-text').value); setStatus('#export-status','Файл сохранён. Прикрепи его в чат.','ok'); });
+
+  /* ---------- import from Claude ---------- */
+  function apply(text){
+    const i=text.indexOf('{'), j=text.lastIndexOf('}');
+    if (i<0||j<i) throw new Error('Не нашёл блок. Скопируй его целиком, от «{» до «}».');
+    let o; try{ o = JSON.parse(text.slice(i,j+1)); }catch(e){ throw new Error('Блок обрезан или изменён. Скопируй его из чата ещё раз.'); }
+    if (o.app==='kompanyon' && o.data){ restore(o); return ['все данные из копии']; }
+    const done = [];
+    const plan = o.plan || (Array.isArray(o.exercises) ? o : null);
+    if (plan && Array.isArray(plan.exercises)){ put('plan', plan); if (!(raw('logs')||{})[TODAY]) put('draft-'+TODAY, null); done.push('план тренировки «'+(plan.title||'')+'»'); }
+    if (o.templates && typeof o.templates==='object'){ put('templates', Object.assign(raw('templates')||{}, o.templates)); done.push('программа тренировок'); }
+    if (Array.isArray(o.habits)){ const hs = o.habits.filter(h=>h&&h.id&&h.name); put('hab-habits', hs); done.push('привычки ('+hs.length+')'); }
+    if (Array.isArray(o.words)){
+      const ws = raw('slv-words')||[]; let n=0;
+      o.words.forEach((w,k)=>{ if(!w||!w.en||!w.ru) return; const ex = ws.find(x=>x.en.toLowerCase()===String(w.en).toLowerCase());
+        if (ex) Object.assign(ex, {ru:w.ru, ex:w.ex||ex.ex||''}); else { ws.push({id:'w'+Date.now().toString(36)+k, en:w.en, ru:w.ru, tr:'', ex:w.ex||'', box:0, due:TODAY, seen:0, right:0, wrong:0, added:TODAY}); n++; } });
+      put('slv-words', ws); done.push('новых слов: '+n);
+    }
+    if (Array.isArray(o.entries)){
+      const es = raw('bj-entries')||[]; let n=0;
+      o.entries.forEach((e,k)=>{ if(!e||!e.text) return; es.push({id:'c'+Date.now().toString(36)+k, type:['task','event','note'].includes(e.type)?e.type:'task', text:e.text, state:'open', pri:!!e.pri,
+        date: e.date || (e.month?undefined:TODAY), month: e.date?undefined:e.month, created:Date.now()+k}); n++; });
+      put('bj-entries', es); done.push('записей в дневник: '+n);
+    }
+    if (!done.length) throw new Error('В блоке нет ни плана, ни привычек, ни слов, ни записей.');
+    return done;
+  }
+  $('#apply').addEventListener('click', ()=>{
+    try{ const d = apply($('#import-text').value); setStatus('#import-status','Применено: '+d.join(', ')+'.','ok'); $('#import-text').value=''; build(); }
+    catch(e){ setStatus('#import-status', e.message, 'err'); }
+  });
+
+  /* ---------- backup ---------- */
+  $('#backup').addEventListener('click', ()=>{
+    const data = {}; for (let k=0;k<localStorage.length;k++){ const key = localStorage.key(k); data[key] = localStorage.getItem(key); }
+    download('kompanyon-backup-'+TODAY+'.json', JSON.stringify({app:'kompanyon', saved:new Date().toISOString(), data}), 'application/json');
+    setStatus('#backup-status','Копия сохранена. Сохрани файл в «Файлы» или iCloud.','ok');
+  });
+  function restore(o){ Object.entries(o.data).forEach(([k,v])=>{ try{ localStorage.setItem(k, v); }catch(e){} }); }
+  $('#restore').addEventListener('change', ev=>{
+    const f = ev.target.files[0]; if (!f) return;
+    const r = new FileReader(); r.onload = () => {
+      try{ const o = JSON.parse(r.result); if (o.app!=='kompanyon' || !o.data) throw 0; restore(o); setStatus('#backup-status','Восстановлено. Данные из копии от '+(o.saved||'').slice(0,10)+'.','ok'); build(); }
+      catch(e){ setStatus('#backup-status','Это не файл копии компаньона.','err'); } };
+    r.readAsText(f); ev.target.value = '';
+  });
+
+  build();
+})();
+</script>
+</body>
+</html>

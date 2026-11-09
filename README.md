@@ -1,9 +1,9 @@
-# Тренировки, меню, привычки, слова
+# Мой компаньон
 
-Офлайн-приложения:
-- Тренировки: https://heisenberg1503.github.io/trenirovki/
-- Меню на неделю: https://heisenberg1503.github.io/trenirovki/pitanie/
-- Привычки: https://heisenberg1503.github.io/trenirovki/privychki/
-- Английские слова: https://heisenberg1503.github.io/trenirovki/slova/
-- Грамматика: https://heisenberg1503.github.io/trenirovki/grammar/
-- Дневник: https://heisenberg1503.github.io/trenirovki/dnevnik/
+Офлайн-приложение: https://heisenberg1503.github.io/trenirovki/
+
+- Дневник (главная) с сериями за неделю
+- Тренировка: trening/
+- Привычки: privychki/
+- Английские слова: slova/
+- Обмен с Claude: obmen/
