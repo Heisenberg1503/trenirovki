@@ -1,4 +1,4 @@
-const C = 'kompanyon-v3';
+const C = 'kompanyon-v4';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-512.png',
   './trening/', './trening/index.html', './trening/icon-180.png',
   './privychki/', './privychki/index.html', './privychki/icon-180.png',

@@ -70,6 +70,12 @@ h2{font-family:var(--f-hand);font-size:28px;font-weight:700;line-height:1;margin
 .st.done .tick{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .st.done span{color:var(--muted);text-decoration:line-through}
 .st .todiary{border:0;background:none;color:var(--accent);font-size:12px;font-weight:700;padding:2px 4px;white-space:nowrap}
+.st .todo{display:flex;gap:4px}
+.st{grid-template-columns:28px 1fr auto}
+.addstep{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.addstep input{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
+.addstep .todo{display:flex;gap:6px;flex-wrap:wrap}
+.morebtn{border:0;background:none;color:var(--muted);font-size:12px;font-weight:700;text-align:left;padding:6px 0}
 .st .indiary{font-size:12px;color:var(--muted);white-space:nowrap}
 .pagein{display:flex;gap:8px;align-items:center}
 .pagein input{width:110px;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 9px}
@@ -124,6 +130,7 @@ body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
   const put = (k,v) => { try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} };
   const pad = n => String(n).padStart(2,'0');
   let goals = GC.load(); GC.syncSteps(goals);
+  const openDone = new Set();
   const T = () => GC.today();
   const save = () => GC.save(goals);
   const G = id => goals.find(g=>g.id===id);
@@ -138,31 +145,39 @@ body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
     h += `<div class="main"><b>${esc(s.main)}</b>${wk?`<span class="dots" aria-label="${wk.done} из ${wk.norm} за неделю">${Array.from({length:wk.norm},(_,i)=>`<i class="${i<wk.done?'on':''}"></i>`).join('')}</span>`:''}</div>`;
     if (s.sub) h += `<p class="sub">${esc(s.sub)}</p>`;
     if (s.needsTotal) h += `<div class="pagein"><input id="total-${g.id}" class="num" inputmode="numeric" placeholder="страниц" aria-label="Сколько страниц в книге"><button class="btn small" data-total="${g.id}">Сохранить</button></div><p class="hint">Сколько страниц в твоём издании?</p>`;
-    if ((g.steps||[]).length){
-      const es = c.entries;
-      h += `<div class="steps">${g.steps.map(st=>{ const inD = es.find(e=>e.goalId===g.id && e.stepId===st.id && e.state==='open');
+    if (['weekly','steps','units','book'].includes(g.type)){
+      const es = c.entries, st0 = (g.steps||[]), undone = st0.filter(x=>!x.done), done = st0.filter(x=>x.done);
+      const row = st => { const inD = es.find(e=>e.goalId===g.id && e.stepId===st.id && e.state==='open');
         return `<div class="st${st.done?' done':''}"><button class="tick" data-step="${g.id}:${st.id}" aria-pressed="${!!st.done}" aria-label="${esc(st.text)}">✓</button><span>${esc(st.text)}</span>
-        ${st.done?'':inD?`<span class="indiary">в дневнике ${GC.nice(inD.date)}</span>`:`<button class="todiary" data-todiary="${g.id}:${st.id}">в дневник →</button>`}</div>`; }).join('')}</div>`;
+        ${st.done?(st.doneAt?`<span class="indiary">${GC.nice(st.doneAt)}</span>`:''):inD?`<span class="indiary">в дневнике ${inD.date===T()?'сегодня':GC.nice(inD.date)}</span>`:`<span class="todo"><button class="todiary" data-todiary="${g.id}:${st.id}:0">сегодня</button><button class="todiary" data-todiary="${g.id}:${st.id}:1">завтра</button></span>`}</div>`; };
+      const showDone = openDone.has(g.id);
+      h += `<div class="steps">${undone.map(row).join('')}
+        ${done.length?`<button class="morebtn" data-moredone="${g.id}">${showDone?'Скрыть выполненные':'Выполнено: '+done.length+' — показать'}</button>${showDone?done.map(row).join(''):''}`:''}
+        <div class="addstep"><input id="ns-${g.id}" placeholder="${g.type==='book'?'Например, глава 5':'Новый шаг, например «Урок 6»'}" aria-label="Новый шаг для «${esc(g.title)}»" enterkeyhint="done">
+          <div class="todo"><button class="btn small acc" data-addstep="${g.id}:0">+ на сегодня</button><button class="btn small" data-addstep="${g.id}:1">+ на завтра</button><button class="btn small" data-addstep="${g.id}:">+ без даты</button></div></div></div>`;
     }
     const acts = [];
-    if (g.type==='book'){ acts.push(`<button class="btn acc" data-timer="${g.id}">▶ Читать</button>`); if (!s.needsTotal) acts.push(`<button class="btn" data-page="${g.id}">Страница</button>`); }
-    if (g.type==='weekly'){ const did = (g.log||[]).some(l=>l.date===T()); acts.push(`<button class="btn acc" data-timer="${g.id}">▶ Занятие</button>`, `<button class="btn" data-mark="${g.id}">${did?'Сегодня ✓':'✓ Сегодня'}</button>`); }
-    if (g.type==='units') acts.push(`<button class="btn acc" data-timer="${g.id}">▶ Занятие</button>`, `<button class="btn" data-unit="${g.id}">+1 ${esc(g.unit||'юнит')}</button>`);
+    if (g.type==='book' && !s.needsTotal) acts.push(`<button class="btn" data-page="${g.id}">Отметить страницу</button>`);
+    if (g.type==='weekly'){ const did = (g.log||[]).some(l=>l.date===T()); acts.push(`<button class="btn${did?'':' acc'}" data-mark="${g.id}">${did?'Сделано сегодня ✓ (отменить)':'✓ Сделано сегодня'}</button>`); }
+    if (g.type==='units') acts.push(`<button class="btn" data-unit="${g.id}">+1 ${esc(g.unit||'юнит')}</button>`);
     if (LINK[g.type]) acts.push(`<a class="btn" href="${LINK[g.type]}" style="text-decoration:none;color:inherit">${g.type==='sport'?'Открыть тренировку':'Открыть слова'}</a>`);
     if (acts.length) h += `<div class="btnrow">${acts.join('')}</div>`;
     return h + `</div>`;
   }
   function render(){
     const c = GC.ctx(), act = goals.filter(g=>g.status==='active'), q = goals.filter(g=>g.status==='queue'), done = goals.filter(g=>g.status==='done');
-    const tt = tState(); const tg = tt && G(tt.gid);
-    let h = (tg && (tt.run || tt.acc>0)) ? `<button class="btn acc wide" data-resume="${tg.id}">${tt.run?'Идёт занятие':'Занятие на паузе'}: ${esc(tg.title)} →</button>` : '';
-    h += `<h2>Сейчас</h2>` + (act.length ? act.map(g=>card(g,c)).join('') : `<p class="empty">Нет целей в работе. Начни любую из очереди.</p>`);
+    let h = `<h2>Сейчас</h2>` + (act.length ? act.map(g=>card(g,c)).join('') : `<p class="empty">Нет целей в работе. Начни любую из очереди.</p>`);
     h += `<h2>В очереди</h2>` + (q.length ? `<div class="mini">${q.map((g,i)=>`<div class="mrow"><button class="title" data-edit="${g.id}" style="border:0;background:none;padding:0;text-align:left"><b>${esc(g.title)}</b><small>${esc(g.sphere)} · ${GC.TYPES[g.type].name.toLowerCase()}</small></button>
       <div class="btnrow">${i?`<button class="btn small" data-up="${g.id}" aria-label="Выше в очереди">↑</button>`:''}<button class="btn small" data-start="${g.id}">Начать</button></div></div>`).join('')}</div>` : `<p class="empty">Очередь пуста.</p>`);
     if (done.length) h += `<h2>Завершено</h2><div class="mini">${done.map(g=>`<div class="mrow"><span><b>${esc(g.title)}</b><small>${g.finishedAt?GC.nice(g.finishedAt):''}</small></span><button class="btn small" data-reopen="${g.id}">Вернуть</button></div>`).join('')}</div>`;
-    h += `<p class="hint">Держи в работе столько, сколько реально тянешь. Нажми на название цели, чтобы изменить её, добавить шаги или завершить.</p>`;
+    h += `<p class="hint">Держи в работе столько, сколько реально тянешь. Шаги — это конкретные дела по цели: «Урок 6», «Глава 5». Добавь шаг с кнопкой «на сегодня», и он появится задачей в дневнике. Отметишь его там — шаг закроется и здесь. Нажми на название цели, чтобы изменить её или завершить.</p>`;
     $('#view').innerHTML = h;
   }
+  function toDiary(g, st, date){
+    const es = raw('bj-entries')||[]; es.push({id:'e'+Date.now().toString(36), type:'task', text:st.text, state:'open', pri:false, date, created:Date.now(), goalId:g.id, goalTitle:g.title, stepId:st.id});
+    put('bj-entries', es);
+  }
+  $('#view').addEventListener('keydown', ev=>{ if (ev.key==='Enter' && /^ns-/.test(ev.target.id||'')){ ev.preventDefault(); const b = document.querySelector(`[data-addstep="${ev.target.id.slice(3)}:0"]`); if (b) b.click(); } });
   $('#view').addEventListener('click', ev=>{
     const b = ev.target.closest('button'); if (!b) return; const d = b.dataset;
     if (d.edit){ openEdit(G(d.edit)); return; }
@@ -172,10 +187,17 @@ body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
     if (d.resume){ renderTimer(G(d.resume)); return; }
     if (d.mark){ const g = G(d.mark), i = g.log.findIndex(l=>l.date===T()); if (i>=0 && !g.log[i].secs) g.log.splice(i,1); else if (i<0) g.log.push({date:T(), value:1}); save(); render(); return; }
     if (d.unit){ G(d.unit).log.push({date:T(), n:1}); save(); render(); return; }
-    if (d.step){ const [gid,sid] = d.step.split(':'), st = G(gid).steps.find(x=>x.id===sid); st.done = !st.done; st.doneAt = st.done?T():null; save(); render(); return; }
-    if (d.todiary){ const [gid,sid] = d.todiary.split(':'), g = G(gid), st = g.steps.find(x=>x.id===sid);
-      const es = raw('bj-entries')||[]; es.push({id:'e'+Date.now().toString(36), type:'task', text:st.text, state:'open', pri:false, date:T(), created:Date.now(), goalId:g.id, goalTitle:g.title, stepId:st.id});
-      put('bj-entries', es); render(); return; }
+    if (d.step){ const [gid,sid] = d.step.split(':'), g = G(gid), st = g.steps.find(x=>x.id===sid); st.done = !st.done; st.doneAt = st.done?T():null;
+      const es = raw('bj-entries')||[]; es.filter(e=>e.goalId===gid && e.stepId===sid && (e.state==='open'||e.state==='done')).forEach(e=>{ e.state = st.done?'done':'open'; }); put('bj-entries', es);
+      if (st.done && g.type==='weekly' && !g.log.some(l=>l.date===T())) g.log.push({date:T(), value:1, step:sid});
+      save(); render(); return; }
+    if (d.moredone){ openDone.has(d.moredone)?openDone.delete(d.moredone):openDone.add(d.moredone); render(); return; }
+    if (d.todiary){ const [gid,sid,k] = d.todiary.split(':'); toDiary(G(gid), G(gid).steps.find(x=>x.id===sid), GC.addD(T(), +k)); render(); return; }
+    if (d.addstep){ const [gid,k] = d.addstep.split(':'), g = G(gid), inp = $('#ns-'+gid), text = inp.value.trim();
+      if (!text){ inp.focus(); return; }
+      const st = {id:'s'+Date.now().toString(36), text, done:false}; (g.steps ||= []).push(st); save();
+      if (k!=='') toDiary(g, st, GC.addD(T(), +k));
+      render(); const n = $('#ns-'+gid); if (n) n.focus(); return; }
     if (d.start){ const g = G(d.start); g.status='active'; g.startedAt = T(); save(); render(); return; }
     if (d.up){ const i = goals.indexOf(G(d.up)); const q = goals.filter(g=>g.status==='queue'); const prev = q[q.indexOf(goals[i])-1]; const j = goals.indexOf(prev); [goals[i],goals[j]]=[goals[j],goals[i]]; save(); render(); return; }
     if (d.reopen){ const g = G(d.reopen); g.status='active'; g.finishedAt=null; save(); render(); return; }
@@ -297,8 +319,6 @@ body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
   $('#add').onclick = openNew;
 
   render();
-  const t = tState(); if (t && t.run && G(t.gid)) renderTimer(G(t.gid));
-  if (location.hash.indexOf('#t-')===0){ const g = G(location.hash.slice(3)); history.replaceState(null,'',location.pathname); if (g) openTimer(g); }
   window.addEventListener('pageshow', render);
 })();
 </script>

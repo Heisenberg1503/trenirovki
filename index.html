@@ -176,6 +176,10 @@ body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
 .grow .gb i{display:block;height:100%;background:var(--accent)}
 .grow b{font-family:var(--f-num);font-size:12px;color:var(--muted);text-align:right;white-space:nowrap}
 .grow.met b{color:var(--accent)}
+/* kinds of items: colours */
+:root{--c-train:#1F7A55; --c-goal:#2E3A8C; --c-habit:#9A6400; --c-words:#9B2C55; --c-task:#4A4D5C; --c-done:#1F9D63; --c-miss:#D32F2F; --c-pend:#D6D4CB}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--c-train:#5CC497; --c-goal:#9AA8F5; --c-habit:#E2B44A; --c-words:#F07AA0; --c-task:#B5B8C8; --c-done:#4CC98A; --c-miss:#FF6B6B; --c-pend:#3A3D4D}}
+:root[data-theme="dark"]{--c-train:#5CC497; --c-goal:#9AA8F5; --c-habit:#E2B44A; --c-words:#F07AA0; --c-task:#B5B8C8; --c-done:#4CC98A; --c-miss:#FF6B6B; --c-pend:#3A3D4D}
 /* combined day list */
 .strip{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
 .wds{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
@@ -208,6 +212,29 @@ body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
 .hsep{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;padding:12px 0 2px}
 .pg{display:flex;gap:6px;margin-top:6px}
 .pg input{width:90px;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 8px}
+
+.hr{position:relative;padding-left:10px}
+.hr::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:4px;border-radius:4px;background:var(--kc,var(--c-task))}
+.k-train{--kc:var(--c-train)} .k-goal{--kc:var(--c-goal)} .k-habit{--kc:var(--c-habit)} .k-words{--kc:var(--c-words)} .k-task{--kc:var(--c-task)}
+.hr .hc{border-color:var(--kc)}
+.hr.done .hc{background:var(--kc);border-color:var(--kc)}
+.hr.task .sig{color:var(--kc)}
+.tag{display:block;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--kc);line-height:1.3}
+.hr.done .tag{opacity:.7}
+.hr.miss{--kc:var(--c-miss)}
+.hr.miss .ht b,.hr.miss .txt{color:var(--c-miss)}
+.hr.task .txt{display:block}
+.hsep.red,.red{color:var(--c-miss)}
+.wd i{width:32px;height:32px;display:grid;place-items:center}
+.wd i::after{inset:6px}
+.wd i em{position:relative;z-index:1;font-style:normal;font-family:var(--f-num);font-size:11px;font-weight:700;color:var(--ink)}
+.wd i.all::after{background:var(--c-done)}
+.wd i.all em{color:var(--accent-ink)}
+.wd i.none{background:none;border:2px dashed var(--line)}
+.wd i.none::after{display:none}
+.legend2{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.legend2 i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.lg-done{background:var(--c-done)} .lg-miss{background:var(--c-miss)} .lg-pend{background:var(--c-pend)}
 </style>
 </head>
 <body>
@@ -268,11 +295,11 @@ body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
   function dayTitle(s){ const d=parse(s); return d.getDate()+' '+MON[d.getMonth()]; }
   function relName(s){ return s===TODAY?'Сегодня':s===addD(TODAY,1)?'Завтра':s===addD(TODAY,-1)?'Вчера':WDL[parse(s).getDay()]; }
 
-  function entryHTML(e){
+  function entryHTML(e, tag){
     const canTick = e.type==='task' && (e.state==='open'||e.state==='done');
     const meta = e.goalTitle && e.state==='open' ? 'цель: '+e.goalTitle : e.state==='migrated' ? 'перенесено на '+(e.to||'') : e.state==='scheduled' ? 'запланировано: '+(e.to||'') : '';
     return `<div class="e ${e.type} ${e.state}${e.pri?' pri':''}"><button class="sig" data-tick="${e.id}" ${canTick?'':'disabled'} aria-label="${canTick?(e.state==='done'?'Снять отметку':'Отметить выполненной'):'Тип записи'}">${sig(e)}</button>
-      <button class="txt" data-edit="${e.id}">${esc(e.text)}${meta?`<span class="meta">${esc(meta)}</span>`:''}</button></div>`;
+      <button class="txt" data-edit="${e.id}">${tag?`<span class="tag">${esc(tag)}</span>`:''}${esc(e.text)}${meta&&!tag?`<span class="meta">${esc(meta)}</span>`:''}</button></div>`;
   }
   function addBox(scope){
     return `<div class="add"><div class="types" role="group" aria-label="Тип записи">
@@ -340,11 +367,20 @@ body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
   let bookOpen = null;
   const manualGet = () => raw('home-manual') || {};
   const manualPut = v => { try{ localStorage.setItem('home-manual', JSON.stringify(v)); }catch(e){} };
+  /* first day each thing was used: earlier days are not counted as missed */
+  function firstDates(){
+    const f = {}, marks = raw('hab-marks')||{};
+    f.workout = Object.keys(raw('logs')||{}).sort()[0] || null;
+    f.words = Object.keys(raw('slv-log')||{}).filter(d=>((raw('slv-log')||{})[d]||{}).reviews).sort()[0] || null;
+    Object.keys(marks).sort().forEach(d=>Object.keys(marks[d]||{}).forEach(id=>{ if (marks[d][id] && !f['h:'+id]) f['h:'+id] = d; }));
+    return f;
+  }
+  const since = (first, d) => d>=TODAY || (first && d>=first);
   function homeCtx(){
     const GC = window.GoalsCore;
     const goals = GC ? GC.load() : []; if (GC) GC.syncSteps(goals);
     return {GC, goals, c: GC ? GC.ctx() : null, plan: raw('plan'), habits: (raw('hab-habits')||[]).filter(h=>!h.auto), marks: raw('hab-marks')||{},
-      settings: raw('slv-settings')||{}, manual: manualGet()};
+      settings: raw('slv-settings')||{}, manual: manualGet(), first: firstDates()};
   }
   /* items for date d (tasks from the diary are handled separately) */
   function buildItems(d, H){
@@ -355,49 +391,59 @@ body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
     let wsub = '';
     if (wl && c.workout(d)){ const sets=(wl.exercises||[]).flatMap(e=>e.sets||[]); wsub = 'подходов '+sets.filter(s=>s.done).length+' из '+sets.length+(wl.feeling?' · ощущения '+wl.feeling+'/5':''); }
     else if (H.plan){ if (H.plan.date===d) wsub = H.plan.title||''; else { const w=(H.plan.week||[]).find(x=>x.day===WD[dow]); if (w) wsub = w.focus; } }
-    items.push({key:'workout', title:'Тренировка'+(wl&&wl.planTitle?': '+wl.planTitle:''), sub:wsub, done:wDone, play:'trening/'});
+    if (wDone || since(H.first.workout, d)) items.push({key:'workout', kind:'train', title:(wl&&wl.planTitle) || (!c.workout(d) && wsub) || 'Тренировка', sub: c.workout(d) ? wsub : '', done:wDone, play:'trening/'});
     /* words */
-    if (c.words.length){
+    if (c.words.length && (((c.wlog[d]||{}).reviews) || since(H.first.words, d))){
       const L = c.wlog[d]||{}, due = c.words.filter(w=>w.seen && w.box<5 && w.due<=d).length;
       const fresh = Math.min(Math.max(0,(H.settings.newPerDay||10)-(L.new||0)), c.words.filter(w=>!w.seen && w.box===0).length);
-      items.push({key:'words', title: L.reviews ? 'Слова: '+L.reviews+' '+plural(L.reviews,'карточка','карточки','карточек') : 'Слова',
-        sub: L.reviews ? (L.new?'новых '+L.new+' · ':'')+Math.max(1,Math.round((L.secs||0)/60))+' мин' : (d===TODAY ? 'повторить '+due+', новых '+fresh : ''),
+      items.push({key:'words', kind:'words', title: L.reviews ? L.reviews+' '+plural(L.reviews,'карточка','карточки','карточек') : (d===TODAY ? 'Повторить '+due+', новых '+fresh : 'Карточки'),
+        sub: L.reviews && L.new ? 'новых '+L.new : '',
         done: !!L.reviews, play:'slova/', noCheck:true});
     }
     /* goals with a rhythm */
     H.goals.filter(g=>g.status==='active').forEach(g=>{
       const logs = (g.log||[]).filter(l=>l.date===d), did = logs.length>0;
-      if (g.type==='weekly' && (weekday || did)){
+      if (!did && g.startedAt && d < g.startedAt) return;
+      if (g.type==='weekly' && (weekday || did) && !forDay(d).some(e=>e.goalId===g.id && e.type==='task')){
         const next = (g.steps||[]).find(s=>!s.done);
-        items.push({key:'g:'+g.id, title:g.title, sub: next ? 'следующий шаг: '+next.text : (g.note||''), done:did, play:'celi/#t-'+g.id});
+        items.push({key:'g:'+g.id, kind:'goal', title:g.title, sub: next ? 'следующий шаг: '+next.text : (g.note||''), done:did});
       }
       if (g.type==='units'){
         const doneN = (g.log||[]).reduce((a,l)=>a+(l.n||0),0), wk = H.GC.weekCount(g, c, H.goals, Array.from({length:7},(_,i)=>addD(monday(d),i)));
         if (did || (weekday && wk < g.perWeek && doneN < g.total))
-          items.push({key:'g:'+g.id, title:g.title, sub:(g.unit||'юнит')+' '+Math.min(g.total, doneN+(did?0:1))+' из '+g.total+' · за неделю '+wk+'/'+g.perWeek, done:did, play:'celi/#t-'+g.id});
+          items.push({key:'g:'+g.id, kind:'goal', title:g.title, sub:(g.unit||'юнит')+' '+Math.min(g.total, doneN+(did?0:1))+' из '+g.total+' · за неделю '+wk+'/'+g.perWeek, done:did});
       }
       if (g.type==='book' && g.total){
         const cur = Math.max(0, ...(g.log||[]).map(l=>l.value||0));
-        if (cur < g.total || did) items.push({key:'g:'+g.id, title:'Читать: '+g.title, sub:'стр. '+cur+' из '+g.total, done:did, play:'celi/#t-'+g.id, book:g.id, cur});
+        if (cur < g.total || did) items.push({key:'g:'+g.id, kind:'goal', title:'Читать: '+g.title, sub:'стр. '+cur+' из '+g.total, done:did, book:g.id, cur});
       }
     });
     /* habits */
     H.habits.forEach(h=>{
       const t = h.kind==='count' ? (h.target||1) : 1, v = (H.marks[d]||{})[h.id]||0;
-      const timed = h.minutes || (h.kind==='count' && /мин/i.test(h.unit||''));
-      items.push({key:'h:'+h.id, title:h.name+(h.kind==='count'?' '+v+'/'+t:''), sub:h.kind==='count'?(h.unit||''):'', done:v>=t, play: timed?'privychki/':null, habit:h});
+      if (!v && !since(H.first['h:'+h.id], d)) return;
+      items.push({key:'h:'+h.id, kind:'habit', title:h.name+(h.kind==='count'?' '+v+'/'+t:''), sub:h.kind==='count'?(h.unit||''):'', done:v>=t, habit:h});
     });
     return items;
   }
-  function dayFrac(d, H){
+  const TAG = {train:'Тренировка', goal:'Цель', habit:'Привычка', words:'Слова', task:'Задача'};
+  function dayStatus(d, H){
     const items = buildItems(d, H), tasks = forDay(d).filter(e=>e.type==='task' && (e.state==='open'||e.state==='done'));
-    const total = items.length + tasks.length; if (!total) return null;
-    return (items.filter(i=>i.done).length + tasks.filter(e=>e.state==='done').length) / total;
+    const st = items.map(i=>i.done).concat(tasks.map(e=>e.state==='done')).map(ok => ok ? 'done' : d<TODAY ? 'miss' : 'pend');
+    return st.sort((x,y)=>['done','miss','pend'].indexOf(x)-['done','miss','pend'].indexOf(y));
+  }
+  function dayFrac(d, H){ const st = dayStatus(d,H); return st.length ? st.filter(x=>x==='done').length/st.length : null; }
+  function ringStyle(st){
+    if (!st.length) return '';
+    const n = st.length, seg = 360/n, gap = n>1 ? Math.min(4, seg/4) : 0, col = {done:'var(--c-done)', miss:'var(--c-miss)', pend:'var(--c-pend)'};
+    const parts = []; st.forEach((x,i)=>{ const a=i*seg, b=(i+1)*seg-gap; parts.push(`${col[x]} ${a.toFixed(1)}deg ${b.toFixed(1)}deg`); if (gap) parts.push(`transparent ${b.toFixed(1)}deg ${((i+1)*seg).toFixed(1)}deg`); });
+    return `background:conic-gradient(${parts.join(',')})`;
   }
   function homeRow(it){
     const open = bookOpen && it.book===bookOpen;
-    return `<div class="hr${it.done?' done':''}"><button class="hc" data-hcheck="${it.key}" aria-pressed="${it.done}" aria-label="${esc(it.title)}">✓</button>
-      <div class="ht"><b>${esc(it.title)}</b>${it.sub?`<small>${esc(it.sub)}</small>`:''}
+    const miss = !it.done && day<TODAY;
+    return `<div class="hr k-${it.kind}${it.done?' done':''}${miss?' miss':''}"><button class="hc" data-hcheck="${it.key}" aria-pressed="${it.done}" aria-label="${esc(it.title)}">✓</button>
+      <div class="ht"><span class="tag">${TAG[it.kind]}${miss?' · не выполнено':''}</span><b>${esc(it.title)}</b>${it.sub?`<small>${esc(it.sub)}</small>`:''}
         ${open?`<span class="pg"><input id="hp-${it.book}" class="num" inputmode="numeric" value="${it.cur||''}" aria-label="Страница"><button class="btn small" data-hpage="${it.book}">Сохранить</button></span><small>На какой странице остановился?</small>`:''}</div>
       ${it.play?`<a class="hp" href="${it.play}" aria-label="Открыть: ${esc(it.title)}">▶</a>`:'<span></span>'}</div>`;
   }
@@ -409,22 +455,27 @@ body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
     const open = day===TODAY ? entries.filter(e=>e.type==='task' && e.state==='open' && e.date && e.date<TODAY) : [];
     /* week strip */
     const m = monday(day), wdays = Array.from({length:7},(_,i)=>addD(m,i));
-    const strip = wdays.map(x=>{ const f = x<=TODAY ? dayFrac(x, H) : null, p = f===null?0:Math.round(f*100), dd = parse(x);
-      return `<button class="wd${x===day?' sel':''}${x===TODAY?' today':''}" data-open-day="${x}" aria-label="${dayTitle(x)}: ${f===null?'нет данных':p+'%'}"><span>${WD[dd.getDay()]}</span><i style="--p:${p}%" class="${x>TODAY?'fut':p>=80?'full':''}"></i><b>${dd.getDate()}</b></button>`; }).join('');
+    const strip = wdays.map(x=>{ const st = dayStatus(x, H), dd = parse(x), dn = st.filter(y=>y==='done').length, ms = st.filter(y=>y==='miss').length;
+      const label = !st.length ? 'ничего не запланировано' : 'сделано '+dn+' из '+st.length+(ms?', не выполнено '+ms:'');
+      return `<button class="wd${x===day?' sel':''}${x===TODAY?' today':''}" data-open-day="${x}" aria-label="${dayTitle(x)}: ${label}"><span>${WD[dd.getDay()]}</span><i style="${ringStyle(st)}" class="${!st.length?'none':dn===st.length?'all':''}"><em>${st.length?dn:''}</em></i><b>${dd.getDate()}</b></button>`; }).join('');
     let streak = 0, s = (dayFrac(TODAY,H)||0)>=0.8 ? TODAY : addD(TODAY,-1);
     while (streak<365){ const f = dayFrac(s,H); if (f===null || f<0.8) break; streak++; s = addD(s,-1); }
     let h = `<div class="nav"><button class="arrow" data-day="-1" aria-label="Предыдущий день">‹</button>
       <div class="ttl"><b>${relName(day)==='Сегодня'?'Сегодня':dayTitle(day)}</b><span>${WDL[d.getDay()]}, ${dayTitle(day)}${day!==TODAY?` · <button class="today-link" data-day="0">к сегодня</button>`:''}</span></div>
       <button class="arrow" data-day="1" aria-label="Следующий день">›</button></div>
-      <div class="strip"><div class="wds">${strip}</div><div class="sline"><span>Сделано <b class="num">${done} из ${total}</b></span><span>серия <b class="num">${streak}</b> ${plural(streak,'день','дня','дней')}</span></div>
+      <div class="strip"><div class="wds">${strip}</div><div class="sline"><span>Сделано <b class="num">${done} из ${total}</b>${total-done?` · ${day<TODAY?'<span class="red">не выполнено '+(total-done)+'</span>':'осталось '+(total-done)}`:''}</span><span>серия <b class="num">${streak}</b> ${plural(streak,'день','дня','дней')}</span></div>
+      <div class="legend2"><span><i class="lg-done"></i>сделано</span><span><i class="lg-miss"></i>не выполнено</span><span><i class="lg-pend"></i>осталось</span></div>
       <div class="pbar"><i style="width:${total?Math.round(done/total*100):0}%"></i></div></div>`;
     if (open.length) h += `<div class="mig"><b>Незакрытые задачи с прошлых дней: ${open.length}</b>
       ${open.slice(0,6).map(e=>`<div class="row"><span>${esc(e.text)}<br><small>${dayTitle(e.date)}</small></span><div class="btnrow"><button class="btn small" data-mig="${e.id}">Сюда</button><button class="btn small" data-x="${e.id}" aria-label="Неактуально">✕</button></div></div>`).join('')}
       ${open.length>1?`<button class="btn small" data-migall="1">Перенести все на сегодня</button>`:''}</div>`;
     /* one list: undone first, done at the bottom */
-    const rows = items.map(it=>({done:it.done, html:homeRow(it)})).concat(tasks.map(e=>({done:e.state!=='open', html:`<div class="hr task">${entryHTML(e)}</div>`})));
+    const taskRow = e => { const k = e.goalId ? 'goal' : 'task', miss = e.state==='open' && day<TODAY;
+      return `<div class="hr task k-${k}${e.state!=='open'?' done':''}${miss?' miss':''}">${entryHTML(e, (e.goalTitle?'Цель · '+e.goalTitle:'Задача')+(miss?' · не выполнено':''))}</div>`; };
+    const rows = items.map(it=>({done:it.done, html:homeRow(it)})).concat(tasks.map(e=>({done:e.state!=='open', html:taskRow(e)})));
     const undone = rows.filter(r=>!r.done), fin = rows.filter(r=>r.done);
-    h += `<div class="page"><div class="eyebrow">${day===TODAY?'Сегодня':'План дня'}</div><div class="hl">${undone.map(r=>r.html).join('')}${fin.length?`<div class="hsep">Сделано</div>`+fin.map(r=>r.html).join(''):''}</div>
+    const head1 = day<TODAY ? '<div class="hsep red">Не выполнено</div>' : day===TODAY ? '<div class="hsep">Осталось сделать</div>' : '<div class="hsep">Запланировано</div>';
+    h += `<div class="page"><div class="hl">${undone.length?head1+undone.map(r=>r.html).join(''):''}${fin.length?`<div class="hsep">Сделано</div>`+fin.map(r=>r.html).join(''):''}</div>
       ${!rows.length?'<div class="empty">На этот день ничего нет.</div>':''}</div>`;
     h += `<div class="page"><div class="eyebrow">Заметки и события</div>${other.length?`<div class="entries">${other.map(entryHTML).join('')}</div>`:'<div class="empty">Пусто. Событие ○ или заметку – можно добавить ниже.</div>'}</div>` + addBox('day');
     $('#view-day').innerHTML = h;
@@ -492,12 +543,19 @@ body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
     e.state = 'migrated'; e.to = dayTitle(date); entries.push(c); }
   function scheduleTo(e, m){ const c = {id:uid(), type:e.type, text:e.text, state:'open', pri:e.pri, month:m, created:Date.now()};
     e.state = 'scheduled'; e.to = MONN[parse(m+'-01').getMonth()].toLowerCase(); entries.push(c); }
+  function goalAttachHTML(e){
+    if (e.type!=='task' || !window.GoalsCore) return '';
+    if (e.goalId) return `<p class="hint">Шаг цели «${esc(e.goalTitle||'')}». <button class="today-link" data-unlink="1">Отвязать</button></p>`;
+    const act = window.GoalsCore.load().filter(g=>g.status==='active' && ['weekly','steps','units','book'].includes(g.type));
+    return act.length ? `<div class="eyebrow">Сделать шагом цели</div><div class="seg">${act.map(g=>`<button data-attach="${g.id}">${esc(g.title)}</button>`).join('')}</div>` : '';
+  }
   function openSheet(id){
     const e = entries.find(x=>x.id===id); if (!e) return;
     const isTask = e.type==='task', open = e.state==='open', tm = addM(e.month || ym(parse(e.date||TODAY)), 1);
     $('#sheet').innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-label="Запись">
       <div class="eyebrow">${e.type==='task'?'Задача':e.type==='event'?'Событие':'Заметка'} · ${e.date?dayTitle(e.date):'задачи месяца'}</div>
       <textarea id="edit-text" aria-label="Текст записи">${esc(e.text)}</textarea>
+      ${goalAttachHTML(e)}
       <div class="seg" role="group" aria-label="Тип"><button data-settype="task" aria-pressed="${e.type==='task'}">• задача</button><button data-settype="event" aria-pressed="${e.type==='event'}">○ событие</button><button data-settype="note" aria-pressed="${e.type==='note'}">– заметка</button></div>
       <div class="acts">
         ${isTask&&open?`<button class="btn" data-s="done">× Выполнено</button>`:''}
@@ -516,6 +574,11 @@ body{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px)) !important}
   $('#sheet').addEventListener('click', ev=>{
     const el = $('#sheet'); if (ev.target===el){ el.hidden=true; return; }
     const e = entries.find(x=>x.id===el.dataset.id); if (!e) return;
+    const at = ev.target.closest('[data-attach]');
+    if (at){ const GC = window.GoalsCore, goals = GC.load(), g = goals.find(x=>x.id===at.dataset.attach); const txt = $('#edit-text').value.trim(); if (txt) e.text = txt;
+      const st = {id:'s'+Date.now().toString(36), text:e.text, done:e.state==='done', doneAt:e.state==='done'?(e.date||TODAY):null}; (g.steps ||= []).push(st);
+      e.goalId = g.id; e.goalTitle = g.title; e.stepId = st.id; GC.save(goals); save(); openSheet(e.id); render(); return; }
+    if (ev.target.closest('[data-unlink]')){ delete e.goalId; delete e.goalTitle; delete e.stepId; save(); openSheet(e.id); render(); return; }
     const t = ev.target.closest('[data-settype]'); if (t){ e.type = t.dataset.settype; if (e.type!=='task' && e.state==='done') e.state='open'; save(); openSheet(e.id); render(); return; }
     const b = ev.target.closest('[data-s]'); if (!b) return; const a = b.dataset.s;
     const txt = $('#edit-text').value.trim(); if (txt) e.text = txt;

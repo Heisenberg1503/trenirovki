@@ -122,7 +122,8 @@
     const es = raw('bj-entries')||[]; let changed = false;
     es.filter(e=>e.goalId && e.stepId && e.state==='done').forEach(e=>{
       const g = goals.find(x=>x.id===e.goalId), st = g && (g.steps||[]).find(x=>x.id===e.stepId);
-      if (st && !st.done){ st.done = true; st.doneAt = e.date || today(); changed = true; } });
+      if (st && !st.done){ st.done = true; st.doneAt = e.date || today(); changed = true;
+        if (g.type==='weekly' && !(g.log||[]).some(l=>l.date===st.doneAt)) (g.log ||= []).push({date:st.doneAt, value:1, step:st.id}); } });
     if (changed) save(goals);
     return changed;
   }
